@@ -59,9 +59,10 @@ export default function Index() {
             transition={{ duration: 1.5, ease: "easeOut" }}
             src={heroBanner}
             alt="EduFlow Learning Marketplace"
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover grayscale-[10%] brightness-[60%]"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-background/95 via-background/70 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-transparent" />
+          <div className="absolute inset-0 bg-black/30" />
         </div>
 
         <div className="container relative z-10 h-full flex items-center">
@@ -69,7 +70,7 @@ export default function Index() {
             variants={containerVariants}
             initial="hidden"
             animate="visible"
-            className="max-w-2xl space-y-8"
+            className="max-w-2xl space-y-8 backdrop-blur-[2px] p-6 rounded-3xl bg-background/10 border border-white/5 shadow-2xl"
           >
             <motion.h1
               variants={itemVariants}

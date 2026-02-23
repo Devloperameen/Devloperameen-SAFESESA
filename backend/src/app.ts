@@ -58,12 +58,20 @@ app.use(
         return callback(null, true);
       }
 
-      // If ALLOWED_ORIGINS is not set, fall back to permissive CORS to avoid
-      // hard-blocking production clients.
-      if (allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+      // If ALLOWED_ORIGINS is not set, allow Vercel domains and Localhost
+      if (allowedOrigins.length === 0) {
+        if (origin.includes('vercel.app') || origin.includes('localhost')) {
+          return callback(null, true);
+        }
+        // Still allow others but log it
+        console.warn('CORS: No ALLOWED_ORIGINS set, allowing origin:', origin);
+        return callback(null, true);
+      }
+
+      if (allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
-        console.log('CORS blocked origin:', origin);
+        console.error('CORS blocked origin:', origin);
         callback(new Error('Not allowed by CORS'));
       }
     },

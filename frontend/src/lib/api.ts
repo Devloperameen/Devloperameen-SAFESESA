@@ -39,7 +39,18 @@ interface ApiRequestOptions {
   token?: string;
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+const getApiBaseUrl = () => {
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+
+  // Auto-detect production environment if VITE_API_URL is missing
+  if (typeof window !== "undefined" && window.location.hostname !== "localhost") {
+    return "https://devloperameen-safesesa-1.onrender.com/api";
+  }
+
+  return "http://localhost:5000/api";
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 export async function apiRequest<T>(
   endpoint: string,
@@ -67,11 +78,17 @@ export async function apiRequestWithMeta<T>(
     headers.Authorization = `Bearer ${authToken}`;
   }
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    method,
-    headers,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      method,
+      headers,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+  } catch (err) {
+    console.error("API Request failed:", err);
+    throw new ApiError("Could not connect to the server. Please check your internet connection or try again later.", 0);
+  }
 
   let payload: ApiResponse<T> | null = null;
   try {
