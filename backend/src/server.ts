@@ -1,27 +1,32 @@
 import app, { ensureDatabaseConnection } from './app';
 
-const PORT = process.env.PORT || 5000;
+const PORT = parseInt(process.env.PORT || '5000', 10);
+const HOST = '0.0.0.0';
 
 const runServer = async () => {
   try {
+    console.log(`[server] Starting EduFlow backend...`);
+    console.log(`[server] Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`[server] Connecting to database...`);
+
     await ensureDatabaseConnection();
 
-    const server = app.listen(PORT, () => {
-      console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
-      console.log(`API available at http://localhost:${PORT}/api`);
-      console.log(`Health check at http://localhost:${PORT}/health`);
+    const server = app.listen(PORT, HOST, () => {
+      console.log(`[server] ✅ Server running on ${HOST}:${PORT}`);
+      console.log(`[server] API available at http://localhost:${PORT}/api`);
+      console.log(`[server] Health check at http://localhost:${PORT}/health`);
     });
 
     server.on('error', (err: NodeJS.ErrnoException) => {
-      if (err && (err as any).code === 'EADDRINUSE') {
-        console.error(`Port ${PORT} is already in use. Kill the process using that port or set a different PORT.`);
+      if (err.code === 'EADDRINUSE') {
+        console.error(`[server] ❌ Port ${PORT} is already in use. Set a different PORT environment variable.`);
         process.exit(1);
       }
-      console.error('Server error:', err);
+      console.error('[server] ❌ Server error:', err);
       process.exit(1);
     });
   } catch (error) {
-    console.error('Unable to start server:', error);
+    console.error('[server] ❌ Unable to start server:', error);
     process.exit(1);
   }
 };
@@ -31,7 +36,7 @@ if (process.env.VERCEL !== '1') {
   runServer();
 
   process.on('unhandledRejection', (err: Error) => {
-    console.error('Unhandled Rejection:', err.message);
+    console.error('[server] Unhandled Rejection:', err.message);
     process.exit(1);
   });
 }
