@@ -11,10 +11,14 @@ import { useRole } from "@/contexts/RoleContext";
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login, isAuthenticated, isLoading } = useAuth();
+  const { login, isAuthenticated, isLoading, isInitializing } = useAuth();
   const { setRole } = useRole();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  if (isInitializing) {
+    return <div className="min-h-screen grid place-items-center text-muted-foreground">Loading...</div>;
+  }
 
   if (isAuthenticated) {
     return <Navigate to="/" replace />;

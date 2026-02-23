@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { Star, Users } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import type { Course } from "@/data/mockData";
+import type { Course } from "@/types/models";
 
 export default function CourseCard({ course }: { course: Course }) {
   return (

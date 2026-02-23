@@ -1,10 +1,11 @@
 import { Link } from "react-router-dom";
 import { ArrowRight, BookOpen, Users, Award, TrendingUp } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import AnimatedPage from "@/components/AnimatedPage";
 import CourseCard from "@/components/CourseCard";
-import { courses } from "@/data/mockData";
 import heroBanner from "@/assets/hero-banner.jpg";
+import { getCourses } from "@/services/courseService";
 
 const stats = [
   { icon: BookOpen, label: "Courses", value: "200+" },
@@ -14,7 +15,10 @@ const stats = [
 ];
 
 export default function Index() {
-  const featured = courses.filter((c) => c.featured).slice(0, 4);
+  const { data: featured = [] } = useQuery({
+    queryKey: ["courses", "featured"],
+    queryFn: () => getCourses({ featured: true }),
+  });
 
   return (
     <AnimatedPage>
@@ -77,7 +81,7 @@ export default function Index() {
           </Button>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {featured.map((course) => (
+          {featured.slice(0, 4).map((course) => (
             <CourseCard key={course.id} course={course} />
           ))}
         </div>

@@ -14,13 +14,17 @@ type SignupRole = "student" | "instructor";
 
 export default function Signup() {
   const navigate = useNavigate();
-  const { register, isAuthenticated, isLoading } = useAuth();
+  const { register, isAuthenticated, isLoading, isInitializing } = useAuth();
   const { setRole } = useRole();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [role, setSelectedRole] = useState<SignupRole>("student");
+
+  if (isInitializing) {
+    return <div className="min-h-screen grid place-items-center text-muted-foreground">Loading...</div>;
+  }
 
   if (isAuthenticated) {
     return <Navigate to="/" replace />;

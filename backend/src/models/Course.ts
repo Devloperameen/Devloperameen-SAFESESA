@@ -4,6 +4,7 @@ import slugify from 'slugify';
 export interface ICourseLesson {
   _id?: Types.ObjectId;
   title: string;
+  description?: string;
   videoUrl: string;
   duration: number;
   order: number;
@@ -17,14 +18,16 @@ export interface ICourseSection {
 
 export interface ICourse extends Document {
   title: string;
+  shortDescription: string;
   slug: string;
   description: string;
   instructorId: Types.ObjectId;
+  previewVideoUrl?: string;
   price: number;
   category: string;
   level: 'beginner' | 'intermediate' | 'advanced';
   thumbnail: string;
-  status: 'draft' | 'pending' | 'published' | 'rejected';
+  status: 'draft' | 'pending' | 'published' | 'pending_unpublish' | 'rejected';
   rejectionReason?: string;
   isFeatured: boolean;
   sections: ICourseSection[];
@@ -39,6 +42,10 @@ const courseLessonSchema = new Schema<ICourseLesson>({
   title: {
     type: String,
     required: true,
+  },
+  description: {
+    type: String,
+    default: '',
   },
   videoUrl: {
     type: String,
@@ -69,6 +76,11 @@ const courseSchema = new Schema<ICourse>(
       required: [true, 'Course title is required'],
       trim: true,
     },
+    shortDescription: {
+      type: String,
+      required: [true, 'Course short description is required'],
+      trim: true,
+    },
     slug: {
       type: String,
       unique: true,
@@ -77,6 +89,11 @@ const courseSchema = new Schema<ICourse>(
     description: {
       type: String,
       required: [true, 'Course description is required'],
+    },
+    previewVideoUrl: {
+      type: String,
+      trim: true,
+      default: '',
     },
     instructorId: {
       type: Schema.Types.ObjectId,
@@ -103,7 +120,7 @@ const courseSchema = new Schema<ICourse>(
     },
     status: {
       type: String,
-      enum: ['draft', 'pending', 'published', 'rejected'],
+      enum: ['draft', 'pending', 'published', 'pending_unpublish', 'rejected'],
       default: 'draft',
     },
     rejectionReason: {

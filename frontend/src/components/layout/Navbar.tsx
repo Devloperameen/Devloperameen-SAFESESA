@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   BookOpen,
@@ -10,13 +10,17 @@ import {
   Menu,
   X,
   ChevronDown,
+  Bell,
+  Megaphone,
   User,
   LogOut,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole, UserRole } from "@/contexts/RoleContext";
+import { getAnnouncements } from "@/services/announcementService";
 import { cn } from "@/lib/utils";
 
 const studentLinks = [
@@ -37,8 +41,11 @@ export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isAnnouncementMenuOpen, setIsAnnouncementMenuOpen] = useState(false);
+  const [lastSeenAt, setLastSeenAt] = useState("");
   const activeRole = user?.role || role;
   const links = activeRole === "instructor" ? instructorLinks : studentLinks;
+  const shouldShowAnnouncements = Boolean(isAuthenticated && user && user.role !== "admin");
 
   const roleLabels: Record<UserRole, string> = { student: "Student", instructor: "Instructor", admin: "Admin" };
   const initials = useMemo(() => {
@@ -47,6 +54,41 @@ export default function Navbar() {
     if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
     return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
   }, [user?.name]);
+
+  const { data: announcements = [] } = useQuery({
+    queryKey: ["announcements", "active"],
+    queryFn: () => getAnnouncements(true),
+    enabled: shouldShowAnnouncements,
+  });
+
+  useEffect(() => {
+    if (!shouldShowAnnouncements || !user) {
+      setLastSeenAt("");
+      return;
+    }
+
+    const storageKey = `eduflow_announcements_seen_${user.id}`;
+    const storedValue = localStorage.getItem(storageKey) || "";
+    setLastSeenAt(storedValue);
+  }, [shouldShowAnnouncements, user]);
+
+  const unreadAnnouncementCount = useMemo(() => {
+    if (!shouldShowAnnouncements) return 0;
+    const lastSeenMs = lastSeenAt ? new Date(lastSeenAt).getTime() : 0;
+
+    return announcements.filter((announcement) => {
+      const createdMs = new Date(announcement.createdAt).getTime();
+      return createdMs > lastSeenMs;
+    }).length;
+  }, [announcements, lastSeenAt, shouldShowAnnouncements]);
+
+  const markAnnouncementsAsSeen = () => {
+    if (!shouldShowAnnouncements || !user) return;
+    const latestTimestamp = announcements[0]?.createdAt || new Date().toISOString();
+    const storageKey = `eduflow_announcements_seen_${user.id}`;
+    localStorage.setItem(storageKey, latestTimestamp);
+    setLastSeenAt(latestTimestamp);
+  };
 
   const handleLogout = () => {
     logout();
@@ -83,6 +125,59 @@ export default function Navbar() {
         </div>
 
         <div className="flex items-center gap-3">
+          {shouldShowAnnouncements && (
+            <DropdownMenu
+              open={isAnnouncementMenuOpen}
+              onOpenChange={(open) => {
+                setIsAnnouncementMenuOpen(open);
+                if (open) {
+                  markAnnouncementsAsSeen();
+                }
+              }}
+            >
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="relative">
+                  <Bell className="h-5 w-5" />
+                  {unreadAnnouncementCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 rounded-full bg-destructive text-[10px] text-destructive-foreground flex items-center justify-center font-semibold">
+                      {unreadAnnouncementCount > 9 ? "9+" : unreadAnnouncementCount}
+                    </span>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-80">
+                <div className="px-3 py-2 border-b border-border">
+                  <p className="text-sm font-medium">Announcements</p>
+                  <p className="text-xs text-muted-foreground">From admin</p>
+                </div>
+                {announcements.length === 0 ? (
+                  <div className="px-3 py-4 text-sm text-muted-foreground">No active announcements.</div>
+                ) : (
+                  <div className="max-h-80 overflow-y-auto">
+                    {announcements.slice(0, 8).map((announcement) => (
+                      <div key={announcement.id} className="px-3 py-3 border-b border-border last:border-b-0">
+                        <div className="flex items-start gap-2">
+                          <Megaphone className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate">{announcement.title}</p>
+                            <p className="text-xs text-muted-foreground line-clamp-2">{announcement.content}</p>
+                            <p className="text-[11px] text-muted-foreground mt-1">
+                              {new Date(announcement.createdAt).toLocaleDateString("en-US", {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              })}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+
           {isAuthenticated && user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

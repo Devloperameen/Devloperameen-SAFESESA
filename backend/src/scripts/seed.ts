@@ -7,6 +7,7 @@ import Enrollment from '../models/Enrollment';
 import Favorite from '../models/Favorite';
 import Activity from '../models/Activity';
 import Announcement from '../models/Announcement';
+import Review from '../models/Review';
 
 dotenv.config();
 
@@ -22,6 +23,7 @@ const seedDatabase = async () => {
     await Favorite.deleteMany({});
     await Activity.deleteMany({});
     await Announcement.deleteMany({});
+    await Review.deleteMany({});
 
     console.log('👥 Creating users...');
     
@@ -106,6 +108,7 @@ const seedDatabase = async () => {
     const courses = await Course.create([
       {
         title: 'Complete React Developer Course',
+        shortDescription: 'Build modern React apps with production-ready patterns.',
         description: 'Master React.js by building real-world projects. Learn hooks, context, Redux, and more.',
         instructorId: instructors[0]._id,
         price: 89.99,
@@ -121,21 +124,22 @@ const seedDatabase = async () => {
           {
             title: 'Getting Started',
             lessons: [
-              { title: 'Introduction to React', videoUrl: 'https://example.com/video1', duration: 15, order: 1 },
-              { title: 'Setting Up Development Environment', videoUrl: 'https://example.com/video2', duration: 20, order: 2 },
+              { title: 'Introduction to React', description: 'Understand what React solves and how component-based UIs work.', videoUrl: 'https://example.com/video1', duration: 15, order: 1 },
+              { title: 'Setting Up Development Environment', description: 'Install tooling and prepare a clean React development environment.', videoUrl: 'https://example.com/video2', duration: 20, order: 2 },
             ],
           },
           {
             title: 'React Fundamentals',
             lessons: [
-              { title: 'Components and Props', videoUrl: 'https://example.com/video3', duration: 25, order: 1 },
-              { title: 'State and Lifecycle', videoUrl: 'https://example.com/video4', duration: 30, order: 2 },
+              { title: 'Components and Props', description: 'Create reusable UI components and pass structured data through props.', videoUrl: 'https://example.com/video3', duration: 25, order: 1 },
+              { title: 'State and Lifecycle', description: 'Manage dynamic state and component lifecycle behavior correctly.', videoUrl: 'https://example.com/video4', duration: 30, order: 2 },
             ],
           },
         ],
       },
       {
         title: 'Python for Data Science',
+        shortDescription: 'Learn Python essentials for analytics and data workflows.',
         description: 'Learn Python programming and data analysis with pandas, numpy, and matplotlib.',
         instructorId: instructors[1]._id,
         price: 79.99,
@@ -151,14 +155,15 @@ const seedDatabase = async () => {
           {
             title: 'Python Basics',
             lessons: [
-              { title: 'Variables and Data Types', videoUrl: 'https://example.com/video5', duration: 18, order: 1 },
-              { title: 'Control Flow', videoUrl: 'https://example.com/video6', duration: 22, order: 2 },
+              { title: 'Variables and Data Types', description: 'Understand core Python types and how to store and transform data.', videoUrl: 'https://example.com/video5', duration: 18, order: 1 },
+              { title: 'Control Flow', description: 'Use conditionals and loops to build practical data-processing scripts.', videoUrl: 'https://example.com/video6', duration: 22, order: 2 },
             ],
           },
         ],
       },
       {
         title: 'UI/UX Design Masterclass',
+        shortDescription: 'Master visual hierarchy, usability, and design systems.',
         description: 'Learn user interface and user experience design from scratch.',
         instructorId: instructors[2]._id,
         price: 69.99,
@@ -174,14 +179,15 @@ const seedDatabase = async () => {
           {
             title: 'Design Principles',
             lessons: [
-              { title: 'Color Theory', videoUrl: 'https://example.com/video7', duration: 20, order: 1 },
-              { title: 'Typography', videoUrl: 'https://example.com/video8', duration: 25, order: 2 },
+              { title: 'Color Theory', description: 'Choose and combine color palettes for readability and brand consistency.', videoUrl: 'https://example.com/video7', duration: 20, order: 1 },
+              { title: 'Typography', description: 'Build effective text hierarchy using type scales and pairings.', videoUrl: 'https://example.com/video8', duration: 25, order: 2 },
             ],
           },
         ],
       },
       {
         title: 'Advanced Node.js Development',
+        shortDescription: 'Build scalable APIs and robust backend services.',
         description: 'Build scalable backend applications with Node.js and Express.',
         instructorId: instructors[0]._id,
         price: 99.99,
@@ -197,13 +203,14 @@ const seedDatabase = async () => {
           {
             title: 'Node.js Fundamentals',
             lessons: [
-              { title: 'Event Loop', videoUrl: 'https://example.com/video9', duration: 30, order: 1 },
+              { title: 'Event Loop', description: 'Understand event loop phases and write non-blocking backend code.', videoUrl: 'https://example.com/video9', duration: 30, order: 1 },
             ],
           },
         ],
       },
       {
         title: 'Machine Learning A-Z',
+        shortDescription: 'Practical machine learning from intuition to implementation.',
         description: 'Complete guide to machine learning algorithms and applications.',
         instructorId: instructors[1]._id,
         price: 94.99,
@@ -219,6 +226,7 @@ const seedDatabase = async () => {
       },
       {
         title: 'Mobile App Development with React Native',
+        shortDescription: 'Create cross-platform mobile apps with one codebase.',
         description: 'Build cross-platform mobile apps using React Native.',
         instructorId: instructors[0]._id,
         price: 84.99,
@@ -332,6 +340,7 @@ const seedDatabase = async () => {
     console.log(`Favorites: ${await Favorite.countDocuments()}`);
     console.log(`Activities: ${await Activity.countDocuments()}`);
     console.log(`Announcements: ${await Announcement.countDocuments()}`);
+    console.log(`Reviews: ${await Review.countDocuments()}`);
 
     process.exit(0);
   } catch (error) {

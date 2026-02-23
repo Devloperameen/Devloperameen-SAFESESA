@@ -4,6 +4,7 @@ export interface IAnnouncement extends Document {
   title: string;
   content: string;
   active: boolean;
+  audience: 'students' | 'instructors' | 'both';
   createdAt: Date;
   updatedAt: Date;
 }
@@ -22,6 +23,11 @@ const announcementSchema = new Schema<IAnnouncement>(
     active: {
       type: Boolean,
       default: true,
+    },
+    audience: {
+      type: String,
+      enum: ['students', 'instructors', 'both'],
+      default: 'both',
     },
   },
   {

@@ -37,7 +37,11 @@ function ProtectedRoute({
   children: JSX.Element;
   allowedRoles?: Array<"student" | "instructor" | "admin">;
 }) {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, isInitializing, user } = useAuth();
+
+  if (isInitializing) {
+    return <div className="container py-16 text-center text-muted-foreground">Loading...</div>;
+  }
 
   if (!isAuthenticated || !user) {
     return <Navigate to="/login" replace />;
@@ -52,7 +56,11 @@ function ProtectedRoute({
 
 function RoleBasedRoutes() {
   const { role } = useRole();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, isInitializing, user } = useAuth();
+
+  if (isInitializing) {
+    return <div className="container py-16 text-center text-muted-foreground">Loading...</div>;
+  }
 
   if (role === "admin") {
     if (!isAuthenticated || user?.role !== "admin") {
@@ -67,6 +75,7 @@ function RoleBasedRoutes() {
             <Route path="/admin" element={<AdminOverview />} />
             <Route path="/admin/users" element={<UserManagement />} />
             <Route path="/admin/courses" element={<CourseModeration />} />
+            <Route path="/admin/course/:id" element={<CourseDetails />} />
             <Route path="/admin/categories" element={<CategoryManagement />} />
             <Route path="/admin/announcements" element={<Announcements />} />
             <Route path="*" element={<Navigate to="/admin" replace />} />
@@ -83,13 +92,14 @@ function RoleBasedRoutes() {
           <Route path="/" element={<Index />} />
           <Route path="/courses" element={<CourseCatalog />} />
           <Route path="/course/:id" element={<CourseDetails />} />
-          <Route path="/my-learning" element={<ProtectedRoute><MyLearning /></ProtectedRoute>} />
-          <Route path="/learn/:id" element={<ProtectedRoute><CoursePlayer /></ProtectedRoute>} />
+          <Route path="/my-learning" element={<ProtectedRoute allowedRoles={["student"]}><MyLearning /></ProtectedRoute>} />
+          <Route path="/learn/:id" element={<ProtectedRoute allowedRoles={["student"]}><CoursePlayer /></ProtectedRoute>} />
           <Route path="/favorites" element={<ProtectedRoute><Favorites /></ProtectedRoute>} />
           <Route path="/instructor" element={<ProtectedRoute allowedRoles={["instructor"]}><InstructorDashboard /></ProtectedRoute>} />
           <Route path="/instructor/courses" element={<ProtectedRoute allowedRoles={["instructor"]}><InstructorCourses /></ProtectedRoute>} />
           <Route path="/instructor/revenue" element={<ProtectedRoute allowedRoles={["instructor"]}><InstructorRevenue /></ProtectedRoute>} />
           <Route path="/instructor/create" element={<ProtectedRoute allowedRoles={["instructor"]}><CourseBuilder /></ProtectedRoute>} />
+          <Route path="/instructor/edit/:id" element={<ProtectedRoute allowedRoles={["instructor"]}><CourseBuilder /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </AnimatePresence>

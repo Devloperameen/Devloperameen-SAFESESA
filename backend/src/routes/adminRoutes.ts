@@ -3,6 +3,7 @@ import {
   getUsers,
   updateUserRole,
   updateUserStatus,
+  getCoursesForModeration,
   updateCourseStatus,
   toggleFeatured,
   getAnalytics,
@@ -21,6 +22,7 @@ router.put('/users/:id/role', updateUserRole);
 router.put('/users/:id/status', updateUserStatus);
 
 // Course moderation
+router.get('/courses', getCoursesForModeration);
 router.put('/courses/:id/status', updateCourseStatus);
 router.put('/courses/:id/featured', toggleFeatured);
 

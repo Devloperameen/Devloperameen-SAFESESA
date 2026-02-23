@@ -59,6 +59,36 @@ export const protect = async (req: AuthRequest, res: Response, next: NextFunctio
   }
 };
 
+export const optionalProtect = async (req: AuthRequest, _res: Response, next: NextFunction) => {
+  try {
+    let token: string | undefined;
+
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+      token = req.headers.authorization.split(' ')[1];
+    }
+
+    if (!token) {
+      next();
+      return;
+    }
+
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'default-secret') as { id: string };
+      const user = await User.findById(decoded.id).select('-password');
+
+      if (user && user.status !== 'suspended') {
+        req.user = user;
+      }
+    } catch {
+      // Ignore invalid tokens on optional auth routes.
+    }
+
+    next();
+  } catch {
+    next();
+  }
+};
+
 export const checkRole = (...roles: string[]) => {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
     if (!req.user) {

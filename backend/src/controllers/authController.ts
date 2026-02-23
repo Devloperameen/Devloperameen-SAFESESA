@@ -9,7 +9,7 @@ import { AuthRequest } from '../middleware/auth';
 const generateToken = (id: string): string => {
   const secret: Secret = (process.env.JWT_SECRET || 'default-secret') as Secret;
   const options: SignOptions = {
-    expiresIn: process.env.JWT_EXPIRE || '7d',
+    expiresIn: (process.env.JWT_EXPIRE || '7d') as SignOptions['expiresIn'],
   };
   return jwt.sign({ id }, secret, options);
 };

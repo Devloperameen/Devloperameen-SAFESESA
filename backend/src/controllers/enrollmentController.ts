@@ -19,7 +19,7 @@ export const enrollCourse = async (req: AuthRequest, res: Response) => {
       });
     }
     
-    if (course.status !== 'published') {
+    if (!['published', 'pending_unpublish'].includes(course.status)) {
       return res.status(400).json({
         success: false,
         message: 'Course is not available for enrollment',

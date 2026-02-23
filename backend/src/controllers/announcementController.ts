@@ -8,11 +8,33 @@ import { AuthRequest } from '../middleware/auth';
 // @access  Public
 export const getAnnouncements = async (req: AuthRequest, res: Response) => {
   try {
-    const { active } = req.query;
+    const { active, audience } = req.query;
     
     const query: any = {};
     if (active === 'true') {
       query.active = true;
+    }
+
+    if (audience && ['students', 'instructors', 'both'].includes(String(audience))) {
+      if (String(audience) === 'both') {
+        query.$or = [{ audience: 'both' }, { audience: { $exists: false } }];
+      } else {
+        query.audience = audience;
+      }
+    } else {
+      if (req.user?.role === 'student') {
+        query.$or = [
+          { audience: { $in: ['students', 'both'] } },
+          { audience: { $exists: false } },
+        ];
+      } else if (req.user?.role === 'instructor') {
+        query.$or = [
+          { audience: { $in: ['instructors', 'both'] } },
+          { audience: { $exists: false } },
+        ];
+      } else if (!req.user) {
+        query.$or = [{ audience: 'both' }, { audience: { $exists: false } }];
+      }
     }
     
     const announcements = await Announcement.find(query).sort({ createdAt: -1 });
@@ -40,7 +62,19 @@ export const createAnnouncement = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ success: false, errors: errors.array() });
     }
     
-    const announcement = await Announcement.create(req.body);
+    if (req.body.audience && !['students', 'instructors', 'both'].includes(req.body.audience)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid announcement audience',
+      });
+    }
+
+    const announcement = await Announcement.create({
+      title: req.body.title,
+      content: req.body.content,
+      active: req.body.active !== undefined ? Boolean(req.body.active) : true,
+      audience: req.body.audience || 'both',
+    });
     
     res.status(201).json({
       success: true,
@@ -59,11 +93,7 @@ export const createAnnouncement = async (req: AuthRequest, res: Response) => {
 // @access  Private (Admin)
 export const updateAnnouncement = async (req: AuthRequest, res: Response) => {
   try {
-    const announcement = await Announcement.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true, runValidators: true }
-    );
+    const announcement = await Announcement.findById(req.params.id);
     
     if (!announcement) {
       return res.status(404).json({
@@ -71,6 +101,30 @@ export const updateAnnouncement = async (req: AuthRequest, res: Response) => {
         message: 'Announcement not found',
       });
     }
+
+    if (req.body.title !== undefined) {
+      announcement.title = String(req.body.title).trim();
+    }
+
+    if (req.body.content !== undefined) {
+      announcement.content = String(req.body.content).trim();
+    }
+
+    if (req.body.active !== undefined) {
+      announcement.active = Boolean(req.body.active);
+    }
+
+    if (req.body.audience !== undefined) {
+      if (!['students', 'instructors', 'both'].includes(req.body.audience)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid announcement audience',
+        });
+      }
+      announcement.audience = req.body.audience;
+    }
+
+    await announcement.save();
     
     res.json({
       success: true,

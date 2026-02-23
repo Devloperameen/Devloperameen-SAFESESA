@@ -1,10 +1,33 @@
 import { Response } from 'express';
 import User from '../models/User';
 import Course from '../models/Course';
-import Category from '../models/Category';
 import Activity from '../models/Activity';
 import Enrollment from '../models/Enrollment';
 import { AuthRequest } from '../middleware/auth';
+
+interface MonthBucket {
+  year: number;
+  month: number;
+  label: string;
+}
+
+const buildRecentMonthBuckets = (monthCount: number): MonthBucket[] => {
+  const now = new Date();
+  const buckets: MonthBucket[] = [];
+
+  for (let offset = monthCount - 1; offset >= 0; offset -= 1) {
+    const date = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - offset, 1));
+    buckets.push({
+      year: date.getUTCFullYear(),
+      month: date.getUTCMonth() + 1,
+      label: date.toLocaleString('en-US', { month: 'short', timeZone: 'UTC' }),
+    });
+  }
+
+  return buckets;
+};
+
+const escapeRegex = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 // @desc    Get all users
 // @route   GET /api/admin/users
@@ -116,6 +139,68 @@ export const updateUserStatus = async (req: AuthRequest, res: Response) => {
   }
 };
 
+// @desc    Get all courses for moderation
+// @route   GET /api/admin/courses
+// @access  Private (Admin)
+export const getCoursesForModeration = async (req: AuthRequest, res: Response) => {
+  try {
+    const { search, status, category, featured, instructorId } = req.query;
+
+    const query: any = {};
+
+    if (status) {
+      const statuses = String(status)
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean);
+      if (statuses.length === 1) {
+        query.status = statuses[0];
+      } else if (statuses.length > 1) {
+        query.status = { $in: statuses };
+      }
+    }
+
+    if (category) {
+      query.category = category;
+    }
+
+    if (featured === 'true') {
+      query.isFeatured = true;
+    } else if (featured === 'false') {
+      query.isFeatured = false;
+    }
+
+    if (instructorId) {
+      query.instructorId = instructorId;
+    }
+
+    if (search) {
+      const regex = new RegExp(escapeRegex(String(search)), 'i');
+      query.$or = [
+        { title: regex },
+        { shortDescription: regex },
+        { description: regex },
+        { category: regex },
+      ];
+    }
+
+    const courses = await Course.find(query)
+      .populate('instructorId', 'profile.name profile.avatar email')
+      .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      count: courses.length,
+      data: courses,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+    });
+  }
+};
+
 // @desc    Approve/Reject course
 // @route   PUT /api/admin/courses/:id/status
 // @access  Private (Admin)
@@ -123,16 +208,43 @@ export const updateCourseStatus = async (req: AuthRequest, res: Response) => {
   try {
     const { status, rejectionReason } = req.body;
     
-    if (!['published', 'rejected', 'pending'].includes(status)) {
+    if (!['published', 'rejected', 'pending', 'draft'].includes(status)) {
       return res.status(400).json({
         success: false,
         message: 'Invalid status',
       });
     }
     
+    const existingCourse = await Course.findById(req.params.id);
+    if (!existingCourse) {
+      return res.status(404).json({
+        success: false,
+        message: 'Course not found',
+      });
+    }
+
+    const previousStatus = existingCourse.status;
+
+    // Validate publish/unpublish moderation transitions.
+    if (previousStatus === 'pending' && !['published', 'rejected'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Pending publish requests can only be approved (published) or rejected',
+      });
+    }
+
+    if (previousStatus === 'pending_unpublish' && !['draft', 'published'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Pending unpublish requests can only be approved (draft) or rejected (published)',
+      });
+    }
+
     const updateData: any = { status };
     if (status === 'rejected' && rejectionReason) {
       updateData.rejectionReason = rejectionReason;
+    } else if (status !== 'rejected') {
+      updateData.rejectionReason = undefined;
     }
     
     const course = await Course.findByIdAndUpdate(
@@ -141,18 +253,33 @@ export const updateCourseStatus = async (req: AuthRequest, res: Response) => {
       { new: true, runValidators: true }
     ).populate('instructorId', 'profile.name');
     
-    if (!course) {
-      return res.status(404).json({
-        success: false,
-        message: 'Course not found',
-      });
-    }
-    
     // Create activity
-    const activityType = status === 'published' ? 'course_approved' : 'course_rejected';
+    let activityType: 'course_approved' | 'course_rejected' = 'course_approved';
+    let message = `Course "${course.title}" status updated to ${status}`;
+
+    if (previousStatus === 'pending' && status === 'published') {
+      activityType = 'course_approved';
+      message = `Course "${course.title}" approved for publishing`;
+    } else if (previousStatus === 'pending' && status === 'rejected') {
+      activityType = 'course_rejected';
+      message = `Course "${course.title}" publish request rejected`;
+    } else if (previousStatus === 'pending_unpublish' && status === 'draft') {
+      activityType = 'course_approved';
+      message = `Course "${course.title}" approved for unpublish`;
+    } else if (previousStatus === 'pending_unpublish' && status === 'published') {
+      activityType = 'course_rejected';
+      message = `Course "${course.title}" unpublish request rejected`;
+    } else if (previousStatus === 'published' && status === 'draft') {
+      activityType = 'course_approved';
+      message = `Course "${course.title}" unpublished by admin`;
+    } else if (status === 'rejected') {
+      activityType = 'course_rejected';
+      message = `Course "${course.title}" rejected`;
+    }
+
     await Activity.create({
       type: activityType,
-      message: `Course "${course.title}" ${status === 'published' ? 'approved' : 'rejected'}`,
+      message,
       courseId: course._id,
     });
     
@@ -202,32 +329,96 @@ export const toggleFeatured = async (req: AuthRequest, res: Response) => {
 // @access  Private (Admin)
 export const getAnalytics = async (req: AuthRequest, res: Response) => {
   try {
-    const totalUsers = await User.countDocuments();
-    const totalCourses = await Course.countDocuments();
-    const totalEnrollments = await Enrollment.countDocuments();
-    const publishedCourses = await Course.countDocuments({ status: 'published' });
-    
-    // Revenue by month (mock data - implement actual payment tracking)
-    const revenueData = [
-      { month: 'Jan', revenue: 12000 },
-      { month: 'Feb', revenue: 15000 },
-      { month: 'Mar', revenue: 18000 },
-      { month: 'Apr', revenue: 22000 },
-      { month: 'May', revenue: 25000 },
-      { month: 'Jun', revenue: 28000 },
-    ];
-    
-    // Category performance
-    const categories = await Category.find().sort({ courseCount: -1 });
+    const [
+      totalUsers,
+      activeUsers,
+      totalCourses,
+      totalEnrollments,
+      publishedCourses,
+      revenueRows,
+      categoryRows,
+    ] = await Promise.all([
+      User.countDocuments(),
+      User.countDocuments({ status: 'active' }),
+      Course.countDocuments(),
+      Enrollment.countDocuments(),
+      Course.countDocuments({ status: 'published' }),
+      Enrollment.aggregate([
+        {
+          $lookup: {
+            from: 'courses',
+            localField: 'courseId',
+            foreignField: '_id',
+            as: 'course',
+          },
+        },
+        { $unwind: '$course' },
+        {
+          $group: {
+            _id: {
+              year: { $year: '$enrolledAt' },
+              month: { $month: '$enrolledAt' },
+            },
+            revenue: { $sum: '$course.price' },
+            enrollments: { $sum: 1 },
+          },
+        },
+        { $sort: { '_id.year': 1, '_id.month': 1 } },
+      ]),
+      Course.aggregate([
+        {
+          $group: {
+            _id: '$category',
+            courses: { $sum: 1 },
+            students: { $sum: '$students' },
+          },
+        },
+        { $sort: { students: -1, courses: -1 } },
+      ]),
+    ]);
+
+    const monthBuckets = buildRecentMonthBuckets(6);
+    const revenueMap = new Map<string, { revenue: number; enrollments: number }>();
+
+    revenueRows.forEach((row: any) => {
+      const key = `${row._id.year}-${row._id.month}`;
+      revenueMap.set(key, {
+        revenue: Number(row.revenue) || 0,
+        enrollments: Number(row.enrollments) || 0,
+      });
+    });
+
+    const revenueData = monthBuckets.map((bucket) => {
+      const key = `${bucket.year}-${bucket.month}`;
+      const item = revenueMap.get(key);
+      return {
+        month: bucket.label,
+        revenue: item?.revenue || 0,
+        enrollments: item?.enrollments || 0,
+      };
+    });
+
+    const totalRevenue = revenueRows.reduce(
+      (sum: number, row: any) => sum + (Number(row.revenue) || 0),
+      0,
+    );
+
+    const categories = categoryRows.map((row: any) => ({
+      name: row._id || 'Uncategorized',
+      courses: Number(row.courses) || 0,
+      students: Number(row.students) || 0,
+    }));
     
     res.json({
       success: true,
       data: {
         overview: {
           totalUsers,
+          activeUsers,
           totalCourses,
           totalEnrollments,
           publishedCourses,
+          totalRevenue,
         },
         revenueData,
         categories,

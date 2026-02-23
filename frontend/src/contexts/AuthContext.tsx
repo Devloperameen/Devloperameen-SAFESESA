@@ -1,41 +1,27 @@
-import { ReactNode, createContext, useContext, useState } from "react";
-import { apiRequest } from "@/lib/api";
+import { ReactNode, createContext, useCallback, useContext, useEffect, useState } from "react";
+import {
+  getCurrentUser,
+  login as loginRequest,
+  register as registerRequest,
+  updateProfile as updateProfileRequest,
+  type AuthUser,
+  type LoginPayload,
+  type RegisterPayload,
+  type UpdateProfilePayload,
+} from "@/services/authService";
 
-export type AuthRole = "student" | "instructor" | "admin";
-
-export interface AuthUser {
-  id: string;
-  email: string;
-  role: AuthRole;
-  name: string;
-  avatar?: string;
-  bio?: string;
-}
-
-interface LoginPayload {
-  email: string;
-  password: string;
-}
-
-interface RegisterPayload {
-  name: string;
-  email: string;
-  password: string;
-  role?: Exclude<AuthRole, "admin">;
-}
-
-interface AuthResponse {
-  token: string;
-  user: AuthUser;
-}
+export type { AuthRole, AuthUser } from "@/services/authService";
 
 interface AuthContextType {
   user: AuthUser | null;
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isInitializing: boolean;
   login: (payload: LoginPayload) => Promise<AuthUser>;
   register: (payload: RegisterPayload) => Promise<AuthUser>;
+  refreshUser: () => Promise<AuthUser | null>;
+  updateProfile: (payload: UpdateProfilePayload) => Promise<AuthUser>;
   logout: () => void;
 }
 
@@ -65,8 +51,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(() => getStoredUser());
   const [token, setToken] = useState<string | null>(() => getStoredToken());
   const [isLoading, setIsLoading] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(Boolean(getStoredToken()));
 
-  const saveSession = (nextToken: string, nextUser: AuthUser) => {
+  const saveSession = useCallback((nextToken: string, nextUser: AuthUser) => {
     setToken(nextToken);
     setUser(nextUser);
 
@@ -74,9 +61,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       localStorage.setItem(TOKEN_STORAGE_KEY, nextToken);
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(nextUser));
     }
-  };
+  }, []);
 
-  const clearSession = () => {
+  const clearSession = useCallback(() => {
     setToken(null);
     setUser(null);
 
@@ -84,15 +71,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       localStorage.removeItem(TOKEN_STORAGE_KEY);
       localStorage.removeItem(USER_STORAGE_KEY);
     }
-  };
+  }, []);
 
   const login = async (payload: LoginPayload): Promise<AuthUser> => {
     setIsLoading(true);
     try {
-      const data = await apiRequest<AuthResponse>("/auth/login", {
-        method: "POST",
-        body: payload,
-      });
+      const data = await loginRequest(payload);
       saveSession(data.token, data.user);
       return data.user;
     } finally {
@@ -103,10 +87,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const register = async (payload: RegisterPayload): Promise<AuthUser> => {
     setIsLoading(true);
     try {
-      const data = await apiRequest<AuthResponse>("/auth/register", {
-        method: "POST",
-        body: payload,
-      });
+      const data = await registerRequest(payload);
       saveSession(data.token, data.user);
       return data.user;
     } finally {
@@ -114,13 +95,68 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const refreshUser = async (): Promise<AuthUser | null> => {
+    if (!token) return null;
+    try {
+      const current = await getCurrentUser();
+      saveSession(token, current);
+      return current;
+    } catch {
+      clearSession();
+      return null;
+    }
+  };
+
+  const updateProfile = async (payload: UpdateProfilePayload): Promise<AuthUser> => {
+    setIsLoading(true);
+    try {
+      const updated = await updateProfileRequest(payload);
+      if (token) {
+        saveSession(token, updated);
+      }
+      return updated;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const hydrateSession = async () => {
+      if (!token) {
+        setIsInitializing(false);
+        return;
+      }
+
+      try {
+        const current = await getCurrentUser();
+        if (!isMounted) return;
+        saveSession(token, current);
+      } catch {
+        if (!isMounted) return;
+        clearSession();
+      } finally {
+        if (isMounted) setIsInitializing(false);
+      }
+    };
+
+    hydrateSession();
+    return () => {
+      isMounted = false;
+    };
+  }, [token, saveSession, clearSession]);
+
   const value = {
     user,
     token,
     isAuthenticated: Boolean(user && token),
     isLoading,
+    isInitializing,
     login,
     register,
+    refreshUser,
+    updateProfile,
     logout: clearSession,
   };
 

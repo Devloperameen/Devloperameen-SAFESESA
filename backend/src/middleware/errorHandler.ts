@@ -37,7 +37,15 @@ export const errorHandler = (
     error = { name: 'ValidationError', message, statusCode: 400 } as ErrorResponse;
   }
 
-  res.status(error.statusCode || 500).json({
+  // Body parser payload too large
+  if ((err as any).type === 'entity.too.large') {
+    const message = 'Request payload is too large. Reduce image size or use a smaller thumbnail.';
+    error = { name: 'PayloadTooLargeError', message, statusCode: 413 } as ErrorResponse;
+  }
+
+  const statusCode = error.statusCode || (err as any).statusCode || (err as any).status || 500;
+
+  res.status(statusCode).json({
     success: false,
     message: error.message || 'Server Error',
     ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
