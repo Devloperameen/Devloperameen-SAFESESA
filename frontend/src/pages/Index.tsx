@@ -6,6 +6,7 @@ import AnimatedPage from "@/components/AnimatedPage";
 import CourseCard from "@/components/CourseCard";
 import heroBanner from "@/assets/hero-banner.jpg";
 import { getCourses } from "@/services/courseService";
+import { useAuth } from "@/contexts/AuthContext";
 
 const stats = [
   { icon: BookOpen, label: "Courses", value: "200+" },
@@ -15,10 +16,16 @@ const stats = [
 ];
 
 export default function Index() {
+  const { isAuthenticated, user } = useAuth();
   const { data: featured = [] } = useQuery({
     queryKey: ["courses", "featured"],
     queryFn: () => getCourses({ featured: true }),
   });
+
+  const showInstructorCta = !isAuthenticated || user?.role === "instructor";
+  const instructorCta = isAuthenticated
+    ? { to: "/instructor/create", label: "Create a Course" }
+    : { to: "/signup", label: "Become an Instructor" };
 
   return (
     <AnimatedPage>
@@ -42,9 +49,11 @@ export default function Index() {
                   Explore Courses <ArrowRight className="ml-1 h-4 w-4" />
                 </Link>
               </Button>
-              <Button asChild variant="outline" size="lg" className="bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/20 hover:text-primary-foreground">
-                <Link to="/instructor/create">Teach on EduFlow</Link>
-              </Button>
+              {showInstructorCta && (
+                <Button asChild variant="outline" size="lg" className="bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/20 hover:text-primary-foreground">
+                  <Link to={instructorCta.to}>{instructorCta.label}</Link>
+                </Button>
+              )}
             </div>
           </div>
         </div>

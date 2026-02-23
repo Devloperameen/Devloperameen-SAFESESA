@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useLocation } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Star, Users, BarChart3, Play, CheckCircle2, Heart } from "lucide-react";
 import { toast } from "sonner";
@@ -8,15 +8,17 @@ import { Badge } from "@/components/ui/badge";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import AnimatedPage from "@/components/AnimatedPage";
 import { useAuth } from "@/contexts/AuthContext";
-import { getYoutubeEmbedUrl } from "@/lib/video";
-import { getCourseById } from "@/services/courseService";
+import { getVideoSource } from "@/lib/video";
+import { getCourseById, getCourseReviews } from "@/services/courseService";
 import { enrollInCourse, getEnrollments } from "@/services/enrollmentService";
 import { addFavorite, getFavorites, removeFavorite } from "@/services/favoriteService";
 
 export default function CourseDetails() {
   const { id } = useParams();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const { isAuthenticated, user } = useAuth();
+  const isAdminPreview = location.pathname.startsWith("/admin/course/");
 
   const { data: course, isLoading, isError } = useQuery({
     queryKey: ["course", id],
@@ -34,6 +36,12 @@ export default function CourseDetails() {
     queryKey: ["favorites", "list"],
     queryFn: getFavorites,
     enabled: isAuthenticated,
+  });
+
+  const { data: reviews = [] } = useQuery({
+    queryKey: ["course", "reviews", id],
+    queryFn: () => getCourseReviews(id || ""),
+    enabled: Boolean(id),
   });
 
   const isEnrolled = useMemo(
@@ -83,7 +91,7 @@ export default function CourseDetails() {
   }
 
   const totalLessons = course.sections.reduce((sum, section) => sum + section.lessons.length, 0);
-  const previewEmbedUrl = getYoutubeEmbedUrl(course.previewVideoUrl);
+  const previewVideo = getVideoSource(course.previewVideoUrl);
 
   return (
     <AnimatedPage>
@@ -111,14 +119,20 @@ export default function CourseDetails() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
           <div className="lg:col-span-2 space-y-10">
             <div className="aspect-video rounded-xl overflow-hidden bg-foreground/5 border border-border flex items-center justify-center">
-              {previewEmbedUrl ? (
-                <iframe
-                  src={previewEmbedUrl}
-                  title={`${course.title} preview`}
-                  className="h-full w-full"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                  allowFullScreen
-                />
+              {previewVideo ? (
+                previewVideo.type === "iframe" ? (
+                  <iframe
+                    src={previewVideo.src}
+                    title={`${course.title} preview`}
+                    className="h-full w-full"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowFullScreen
+                  />
+                ) : (
+                  <video className="h-full w-full" controls preload="metadata">
+                    <source src={previewVideo.src} />
+                  </video>
+                )
               ) : (
                 <div className="text-center space-y-3">
                   <div className="h-16 w-16 rounded-full gradient-primary mx-auto flex items-center justify-center">
@@ -148,9 +162,38 @@ export default function CourseDetails() {
             </div>
 
             <div className="space-y-4">
+              <h2 className="font-display text-xl font-bold">Student Reviews</h2>
+              {reviews.length === 0 ? (
+                <div className="rounded-lg border border-border bg-muted/20 p-4 text-sm text-muted-foreground">
+                  No reviews yet.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {reviews.map((review) => (
+                    <div key={review.id} className="rounded-lg border border-border p-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="font-medium">{review.studentName}</p>
+                        <div className="flex items-center gap-1 text-sm">
+                          <Star className="h-4 w-4 fill-star text-star" />
+                          <span>{review.rating.toFixed(1)}</span>
+                        </div>
+                      </div>
+                      {review.comment && (
+                        <p className="mt-2 text-sm text-muted-foreground">{review.comment}</p>
+                      )}
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        {new Date(review.createdAt).toLocaleDateString("en-US")}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="font-display text-xl font-bold">Course Content</h2>
-                <p className="text-sm text-muted-foreground">{course.sections.length} sections · {totalLessons} lessons</p>
+                <p className="text-sm text-muted-foreground">{course.sections.length} sections | {totalLessons} lessons</p>
               </div>
               <Accordion type="multiple" className="space-y-2">
                 {course.sections.map((section) => (
@@ -185,49 +228,61 @@ export default function CourseDetails() {
             <div className="sticky top-20 border border-border rounded-xl p-6 bg-card shadow-card space-y-5">
               <p className="font-display text-3xl font-bold">${course.price}</p>
 
-              {!isAuthenticated ? (
-                <Button asChild className="w-full gradient-primary border-0 text-primary-foreground font-semibold" size="lg">
-                  <Link to="/login">Log In to Enroll</Link>
-                </Button>
-              ) : user?.role !== "student" ? (
-                <Button className="w-full gradient-primary border-0 text-primary-foreground font-semibold" size="lg" disabled>
-                  Students Only
-                </Button>
-              ) : isEnrolled ? (
-                <Button className="w-full gradient-primary border-0 text-primary-foreground font-semibold" size="lg" disabled>
-                  Already Enrolled
-                </Button>
+              {isAdminPreview ? (
+                <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm text-muted-foreground">
+                  Admin preview mode: enrollment and favorite actions are hidden.
+                </div>
               ) : (
-                <Button
-                  className="w-full gradient-primary border-0 text-primary-foreground font-semibold"
-                  size="lg"
-                  disabled={enrollMutation.isPending}
-                  onClick={() => enrollMutation.mutate(course.id)}
-                >
-                  {enrollMutation.isPending ? "Enrolling..." : "Enroll Now"}
-                </Button>
-              )}
+                <>
+                  {!isAuthenticated ? (
+                    <Button asChild className="w-full gradient-primary border-0 text-primary-foreground font-semibold" size="lg">
+                      <Link to="/login">Log In to Enroll</Link>
+                    </Button>
+                  ) : user?.role !== "student" ? (
+                    <Button className="w-full gradient-primary border-0 text-primary-foreground font-semibold" size="lg" disabled>
+                      Students Only
+                    </Button>
+                  ) : isEnrolled ? (
+                    <Button className="w-full gradient-primary border-0 text-primary-foreground font-semibold" size="lg" disabled>
+                      Already Enrolled
+                    </Button>
+                  ) : course.price > 0 ? (
+                    <Button asChild className="w-full gradient-primary border-0 text-primary-foreground font-semibold" size="lg">
+                      <Link to={`/payment/${course.id}`}>Go to Payment</Link>
+                    </Button>
+                  ) : (
+                    <Button
+                      className="w-full gradient-primary border-0 text-primary-foreground font-semibold"
+                      size="lg"
+                      disabled={enrollMutation.isPending}
+                      onClick={() => enrollMutation.mutate(course.id)}
+                    >
+                      {enrollMutation.isPending ? "Enrolling..." : "Enroll for Free"}
+                    </Button>
+                  )}
 
-              <Button
-                variant="outline"
-                className="w-full"
-                size="lg"
-                asChild={isEnrolled}
-                disabled={!isEnrolled}
-              >
-                {isEnrolled ? <Link to={`/learn/${course.id}`}>Start Learning</Link> : <span>Enroll to Start Learning</span>}
-              </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    size="lg"
+                    asChild={isEnrolled}
+                    disabled={!isEnrolled}
+                  >
+                    {isEnrolled ? <Link to={`/learn/${course.id}`}>Start Learning</Link> : <span>Enroll to Start Learning</span>}
+                  </Button>
 
-              {isAuthenticated && (
-                <Button
-                  variant="outline"
-                  className="w-full gap-2"
-                  onClick={() => favoriteMutation.mutate(course.id)}
-                  disabled={favoriteMutation.isPending}
-                >
-                  <Heart className={`h-4 w-4 ${isFavorite ? "fill-current" : ""}`} />
-                  {isFavorite ? "Saved to Favorites" : "Save to Favorites"}
-                </Button>
+                  {isAuthenticated && (
+                    <Button
+                      variant="outline"
+                      className="w-full gap-2"
+                      onClick={() => favoriteMutation.mutate(course.id)}
+                      disabled={favoriteMutation.isPending}
+                    >
+                      <Heart className={`h-4 w-4 ${isFavorite ? "fill-current" : ""}`} />
+                      {isFavorite ? "Saved to Favorites" : "Save to Favorites"}
+                    </Button>
+                  )}
+                </>
               )}
 
               <div className="space-y-3 pt-4 border-t border-border text-sm">
@@ -236,10 +291,12 @@ export default function CourseDetails() {
                 <div className="flex justify-between"><span className="text-muted-foreground">Level</span><span className="font-medium">{course.level}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Students</span><span className="font-medium">{course.students.toLocaleString()}</span></div>
               </div>
-              <div className="flex items-center gap-2 pt-2 text-sm text-muted-foreground">
-                <CheckCircle2 className="h-4 w-4 text-success" />
-                <span>30-day money-back guarantee</span>
-              </div>
+              {!isAdminPreview && (
+                <div className="flex items-center gap-2 pt-2 text-sm text-muted-foreground">
+                  <CheckCircle2 className="h-4 w-4 text-success" />
+                  <span>30-day money-back guarantee</span>
+                </div>
+              )}
             </div>
           </div>
         </div>

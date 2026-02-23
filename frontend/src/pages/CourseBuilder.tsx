@@ -96,6 +96,8 @@ export default function CourseBuilder() {
   const [sections, setSections] = useState<BuilderSection[]>([initialSection()]);
   const [hydratedFromCourse, setHydratedFromCourse] = useState(false);
   const [thumbnailFileName, setThumbnailFileName] = useState("");
+  const [draggingSectionId, setDraggingSectionId] = useState<string | null>(null);
+  const [draggingLesson, setDraggingLesson] = useState<{ sectionId: string; lessonId: string } | null>(null);
   const thumbnailFileInputRef = useRef<HTMLInputElement | null>(null);
 
   const { data: categories = [] } = useQuery({
@@ -250,6 +252,57 @@ export default function CourseBuilder() {
           : section,
       ),
     );
+  };
+
+  const moveSection = (sourceSectionId: string, targetSectionId: string) => {
+    setSections((prev) => {
+      const sourceIndex = prev.findIndex((section) => section.id === sourceSectionId);
+      const targetIndex = prev.findIndex((section) => section.id === targetSectionId);
+      if (sourceIndex === -1 || targetIndex === -1 || sourceIndex === targetIndex) return prev;
+
+      const next = [...prev];
+      const [movedSection] = next.splice(sourceIndex, 1);
+      next.splice(targetIndex, 0, movedSection);
+      return next;
+    });
+  };
+
+  const moveLesson = (sectionId: string, sourceLessonId: string, targetLessonId: string) => {
+    setSections((prev) =>
+      prev.map((section) => {
+        if (section.id !== sectionId) return section;
+
+        const sourceIndex = section.lessons.findIndex((lesson) => lesson.id === sourceLessonId);
+        const targetIndex = section.lessons.findIndex((lesson) => lesson.id === targetLessonId);
+
+        if (sourceIndex === -1 || targetIndex === -1 || sourceIndex === targetIndex) {
+          return section;
+        }
+
+        const nextLessons = [...section.lessons];
+        const [movedLesson] = nextLessons.splice(sourceIndex, 1);
+        nextLessons.splice(targetIndex, 0, movedLesson);
+
+        return {
+          ...section,
+          lessons: nextLessons,
+        };
+      }),
+    );
+  };
+
+  const handleSectionDrop = (targetSectionId: string) => {
+    if (!draggingSectionId || draggingSectionId === targetSectionId) return;
+    moveSection(draggingSectionId, targetSectionId);
+    setDraggingSectionId(null);
+  };
+
+  const handleLessonDrop = (sectionId: string, targetLessonId: string) => {
+    if (!draggingLesson) return;
+    if (draggingLesson.sectionId !== sectionId || draggingLesson.lessonId === targetLessonId) return;
+
+    moveLesson(sectionId, draggingLesson.lessonId, targetLessonId);
+    setDraggingLesson(null);
   };
 
   const normalizedSections = useMemo(
@@ -463,10 +516,10 @@ export default function CourseBuilder() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="previewVideoUrl">Course Preview YouTube URL</Label>
+                  <Label htmlFor="previewVideoUrl">Course Preview Video URL</Label>
                   <Input
                     id="previewVideoUrl"
-                    placeholder="https://www.youtube.com/watch?v=..."
+                    placeholder="https://www.youtube.com/watch?v=... or https://vimeo.com/... or file URL"
                     value={form.previewVideoUrl}
                     onChange={(event) => updateForm("previewVideoUrl", event.target.value)}
                   />
@@ -570,11 +623,28 @@ export default function CourseBuilder() {
 
           <TabsContent value="curriculum">
             <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Drag and drop sections and lessons to reorder your curriculum.
+              </p>
               {sections.map((section, sectionIndex) => (
-                <Card key={section.id} className="shadow-card">
+                <Card
+                  key={section.id}
+                  className="shadow-card"
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={() => handleSectionDrop(section.id)}
+                >
                   <CardHeader className="pb-3">
                     <div className="flex items-center gap-3">
-                      <GripVertical className="h-4 w-4 text-muted-foreground" />
+                      <button
+                        type="button"
+                        draggable
+                        onDragStart={() => setDraggingSectionId(section.id)}
+                        onDragEnd={() => setDraggingSectionId(null)}
+                        className="cursor-grab text-muted-foreground active:cursor-grabbing"
+                        aria-label={`Drag section ${sectionIndex + 1}`}
+                      >
+                        <GripVertical className="h-4 w-4" />
+                      </button>
                       <Input
                         value={section.title}
                         onChange={(event) => updateSection(section.id, event.target.value)}
@@ -588,7 +658,15 @@ export default function CourseBuilder() {
                   </CardHeader>
                   <CardContent className="space-y-3">
                     {section.lessons.map((lesson, lessonIndex) => (
-                      <div key={lesson.id} className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
+                      <div
+                        key={lesson.id}
+                        draggable
+                        onDragStart={() => setDraggingLesson({ sectionId: section.id, lessonId: lesson.id })}
+                        onDragEnd={() => setDraggingLesson(null)}
+                        onDragOver={(event) => event.preventDefault()}
+                        onDrop={() => handleLessonDrop(section.id, lesson.id)}
+                        className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg"
+                      >
                         <span className="text-xs text-muted-foreground mt-2.5 shrink-0">L{lessonIndex + 1}</span>
                         <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-3">
                           <Input
@@ -600,7 +678,7 @@ export default function CourseBuilder() {
                           <Input
                             value={lesson.videoUrl}
                             onChange={(event) => updateLesson(section.id, lesson.id, "videoUrl", event.target.value)}
-                            placeholder="Video URL (YouTube/Vimeo)"
+                            placeholder="Video URL (YouTube/Vimeo/file)"
                             className="text-sm"
                           />
                           <Input

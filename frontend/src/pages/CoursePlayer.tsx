@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
-import { getYoutubeEmbedUrl } from "@/lib/video";
+import { getVideoSource } from "@/lib/video";
 import { ApiError } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import PageBackButton from "@/components/PageBackButton";
@@ -126,7 +126,7 @@ export default function CoursePlayer() {
   );
   const progress = totalLessons > 0 ? Math.round((completedLessons.size / totalLessons) * 100) : 0;
   const currentLesson = course?.sections.flatMap((section) => section.lessons).find((lesson) => lesson.id === activeLesson);
-  const currentVideoEmbedUrl = getYoutubeEmbedUrl(currentLesson?.videoUrl);
+  const currentVideoSource = getVideoSource(currentLesson?.videoUrl);
   const isCurrentLessonCompleted = completedLessons.has(activeLesson);
   const canReviewCourse = progress === 100;
 
@@ -178,14 +178,20 @@ export default function CoursePlayer() {
       <div className="flex-1 flex flex-col">
         <div className="flex-1 flex items-center justify-center bg-foreground">
           <div className="w-full max-w-5xl aspect-video bg-foreground/80 rounded-lg flex items-center justify-center mx-4">
-            {currentVideoEmbedUrl ? (
-              <iframe
-                src={currentVideoEmbedUrl}
-                title={currentLesson?.title || "Course lesson"}
-                className="h-full w-full rounded-lg"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowFullScreen
-              />
+            {currentVideoSource ? (
+              currentVideoSource.type === "iframe" ? (
+                <iframe
+                  src={currentVideoSource.src}
+                  title={currentLesson?.title || "Course lesson"}
+                  className="h-full w-full rounded-lg"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                />
+              ) : (
+                <video className="h-full w-full rounded-lg" controls preload="metadata">
+                  <source src={currentVideoSource.src} />
+                </video>
+              )
             ) : (
               <div className="text-center space-y-2">
                 <div className="h-16 w-16 rounded-full gradient-primary mx-auto flex items-center justify-center">
@@ -193,7 +199,7 @@ export default function CoursePlayer() {
                 </div>
                 <p className="text-muted text-sm">{currentLesson?.title}</p>
                 <p className="text-muted/60 text-xs">
-                  Add a valid YouTube URL in curriculum to play this lesson.
+                  Add a valid YouTube, Vimeo, or direct video URL in curriculum to play this lesson.
                 </p>
               </div>
             )}

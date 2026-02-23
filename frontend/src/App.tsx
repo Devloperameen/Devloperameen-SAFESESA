@@ -18,7 +18,9 @@ import Favorites from "./pages/Favorites";
 import InstructorDashboard from "./pages/InstructorDashboard";
 import InstructorCourses from "./pages/InstructorCourses";
 import InstructorRevenue from "./pages/InstructorRevenue";
+import InstructorMessages from "./pages/InstructorMessages";
 import CourseBuilder from "./pages/CourseBuilder";
+import Payment from "./pages/Payment";
 import AdminOverview from "./pages/AdminOverview";
 import UserManagement from "./pages/UserManagement";
 import CourseModeration from "./pages/CourseModeration";
@@ -98,8 +100,11 @@ function RoleBasedRoutes() {
           <Route path="/instructor" element={<ProtectedRoute allowedRoles={["instructor"]}><InstructorDashboard /></ProtectedRoute>} />
           <Route path="/instructor/courses" element={<ProtectedRoute allowedRoles={["instructor"]}><InstructorCourses /></ProtectedRoute>} />
           <Route path="/instructor/revenue" element={<ProtectedRoute allowedRoles={["instructor"]}><InstructorRevenue /></ProtectedRoute>} />
+          <Route path="/instructor/messages" element={<ProtectedRoute allowedRoles={["instructor"]}><InstructorMessages /></ProtectedRoute>} />
           <Route path="/instructor/create" element={<ProtectedRoute allowedRoles={["instructor"]}><CourseBuilder /></ProtectedRoute>} />
           <Route path="/instructor/edit/:id" element={<ProtectedRoute allowedRoles={["instructor"]}><CourseBuilder /></ProtectedRoute>} />
+          <Route path="/payment" element={<ProtectedRoute allowedRoles={["student"]}><Payment /></ProtectedRoute>} />
+          <Route path="/payment/:id" element={<ProtectedRoute allowedRoles={["student"]}><Payment /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </AnimatePresence>

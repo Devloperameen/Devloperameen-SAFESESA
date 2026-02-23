@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Edit, Trash2, Users, Star, Eye } from "lucide-react";
@@ -8,19 +8,39 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import AnimatedPage from "@/components/AnimatedPage";
-import { deleteCourseById, getInstructorCourses } from "@/services/courseService";
+import { deleteCourseById, getInstructorCourseStudents, getInstructorCoursesPage } from "@/services/courseService";
+import type { Course } from "@/types/models";
 
 export default function InstructorCourses() {
   const queryClient = useQueryClient();
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [coursesPage, setCoursesPage] = useState(1);
+  const coursesPageSize = 20;
+  const [studentsCourse, setStudentsCourse] = useState<Course | null>(null);
+  const [studentsPage, setStudentsPage] = useState(1);
+  const studentsPageSize = 10;
 
   const {
-    data: myCourses = [],
+    data: pagedCourses,
     isLoading,
     isError,
   } = useQuery({
-    queryKey: ["instructor", "courses"],
-    queryFn: getInstructorCourses,
+    queryKey: ["instructor", "courses", coursesPage],
+    queryFn: () => getInstructorCoursesPage(coursesPage, coursesPageSize),
+  });
+
+  useEffect(() => {
+    setStudentsPage(1);
+  }, [studentsCourse?.id]);
+
+  const {
+    data: pagedStudents,
+    isLoading: studentsLoading,
+    isError: studentsError,
+  } = useQuery({
+    queryKey: ["instructor", "course-students", studentsCourse?.id, studentsPage],
+    enabled: Boolean(studentsCourse?.id),
+    queryFn: () => getInstructorCourseStudents(studentsCourse?.id || "", studentsPage, studentsPageSize),
   });
 
   const deleteMutation = useMutation({
@@ -43,13 +63,24 @@ export default function InstructorCourses() {
     rejected: "bg-destructive/10 text-destructive border-destructive/20",
   };
 
+  const students = pagedStudents?.items || [];
+  const myCourses = pagedCourses?.items || [];
+  const totalCourses = pagedCourses?.total || 0;
+  const courseHasPrev = pagedCourses?.hasPrev || false;
+  const courseHasNext = pagedCourses?.hasNext || false;
+  const coursesTotalPages = pagedCourses?.totalPages || 1;
+  const totalStudents = pagedStudents?.total || 0;
+  const studentsHasPrev = pagedStudents?.hasPrev || false;
+  const studentsHasNext = pagedStudents?.hasNext || false;
+  const studentsTotalPages = pagedStudents?.totalPages || 1;
+
   return (
     <AnimatedPage>
       <div className="container py-8">
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="font-display text-3xl font-bold">My Courses</h1>
-            <p className="text-muted-foreground mt-1">{myCourses.length} courses created</p>
+            <p className="text-muted-foreground mt-1">{totalCourses.toLocaleString()} courses created</p>
           </div>
           <Button asChild className="gradient-primary border-0 text-primary-foreground gap-2">
             <Link to="/instructor/create"><Plus className="h-4 w-4" /> Create Course</Link>
@@ -81,6 +112,9 @@ export default function InstructorCourses() {
                           </Button>
                           <Button asChild variant="outline" size="sm" className="gap-1">
                             <Link to={`/instructor/edit/${course.id}`}><Edit className="h-3.5 w-3.5" /> Edit</Link>
+                          </Button>
+                          <Button variant="outline" size="sm" className="gap-1" onClick={() => setStudentsCourse(course)}>
+                            <Users className="h-3.5 w-3.5" /> Students
                           </Button>
                           <Dialog open={deleteId === course.id} onOpenChange={(open) => !open && setDeleteId(null)}>
                             <DialogTrigger asChild>
@@ -120,6 +154,112 @@ export default function InstructorCourses() {
             ))}
           </div>
         )}
+
+        {!isLoading && !isError && coursesTotalPages > 1 && (
+          <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-muted-foreground">
+              Page {coursesPage} of {coursesTotalPages}
+            </p>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={!courseHasPrev}
+                onClick={() => setCoursesPage((prev) => Math.max(1, prev - 1))}
+              >
+                Previous
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={!courseHasNext}
+                onClick={() => setCoursesPage((prev) => prev + 1)}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
+
+        <Dialog open={Boolean(studentsCourse)} onOpenChange={(open) => !open && setStudentsCourse(null)}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Enrolled Students</DialogTitle>
+              <DialogDescription>
+                {studentsCourse ? `${studentsCourse.title} | ${totalStudents.toLocaleString()} total students` : ""}
+              </DialogDescription>
+            </DialogHeader>
+
+            {studentsLoading ? (
+              <div className="rounded-lg border border-border bg-muted/20 p-6 text-sm text-muted-foreground text-center">
+                Loading enrolled students...
+              </div>
+            ) : studentsError ? (
+              <div className="rounded-lg border border-border bg-muted/20 p-6 text-sm text-muted-foreground text-center">
+                Unable to load enrolled students.
+              </div>
+            ) : students.length === 0 ? (
+              <div className="rounded-lg border border-border bg-muted/20 p-6 text-sm text-muted-foreground text-center">
+                No students enrolled yet.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="max-h-96 overflow-y-auto space-y-2 pr-1">
+                  {students.map((student) => (
+                    <div key={student.enrollmentId} className="rounded-lg border border-border/70 p-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-medium truncate">{student.name}</p>
+                          <p className="text-xs text-muted-foreground truncate">{student.email}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-semibold">{student.progress}%</p>
+                          <p className="text-xs text-muted-foreground">progress</p>
+                        </div>
+                      </div>
+                      <div className="mt-2 text-xs text-muted-foreground">
+                        Enrolled: {new Date(student.enrolledAt).toLocaleDateString("en-US")}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {studentsTotalPages > 1 && (
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between pt-2">
+                    <p className="text-xs text-muted-foreground">
+                      Page {studentsPage} of {studentsTotalPages}
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={!studentsHasPrev}
+                        onClick={() => setStudentsPage((prev) => Math.max(1, prev - 1))}
+                      >
+                        Previous
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={!studentsHasNext}
+                        onClick={() => setStudentsPage((prev) => prev + 1)}
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setStudentsCourse(null)}>
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AnimatedPage>
   );

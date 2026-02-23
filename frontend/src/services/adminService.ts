@@ -1,4 +1,5 @@
 import { apiRequest } from "@/lib/api";
+import { apiRequestWithMeta } from "@/lib/api";
 import { BackendCourse, BackendUser, mapCourse, mapPlatformUser } from "@/services/mappers";
 import type { Course, PlatformUser } from "@/types/models";
 
@@ -6,6 +7,8 @@ interface UserQuery {
   search?: string;
   role?: "student" | "instructor" | "admin";
   status?: "active" | "suspended";
+  page?: number;
+  limit?: number;
 }
 
 interface CourseModerationQuery {
@@ -14,6 +17,18 @@ interface CourseModerationQuery {
   category?: string;
   featured?: "true" | "false";
   instructorId?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface PaginatedResult<T> {
+  items: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
 }
 
 interface AdminOverviewMetrics {
@@ -80,14 +95,30 @@ function makeQueryString(params: Record<string, string | undefined>) {
 }
 
 export async function getAdminUsers(query: UserQuery = {}): Promise<PlatformUser[]> {
-  const data = await apiRequest<BackendUser[]>(
+  const result = await getAdminUsersPage(query);
+  return result.items;
+}
+
+export async function getAdminUsersPage(query: UserQuery = {}): Promise<PaginatedResult<PlatformUser>> {
+  const payload = await apiRequestWithMeta<BackendUser[]>(
     `/admin/users${makeQueryString({
       search: query.search,
       role: query.role,
       status: query.status,
+      page: query.page ? String(query.page) : undefined,
+      limit: query.limit ? String(query.limit) : undefined,
     })}`,
   );
-  return data.map(mapPlatformUser);
+
+  return {
+    items: payload.data.map(mapPlatformUser),
+    total: payload.pagination?.total || payload.total || payload.count || payload.data.length,
+    page: payload.pagination?.page || query.page || 1,
+    limit: payload.pagination?.limit || query.limit || payload.data.length,
+    totalPages: payload.pagination?.totalPages || 1,
+    hasNext: payload.pagination?.hasNext || false,
+    hasPrev: payload.pagination?.hasPrev || false,
+  };
 }
 
 export async function updateAdminUserRole(
@@ -113,15 +144,33 @@ export async function updateAdminUserStatus(
 }
 
 export async function getModerationCourses(query: CourseModerationQuery = {}): Promise<Course[]> {
+  const result = await getModerationCoursesPage(query);
+  return result.items;
+}
+
+export async function getModerationCoursesPage(
+  query: CourseModerationQuery = {},
+): Promise<PaginatedResult<Course>> {
   const endpoint = `/admin/courses${makeQueryString({
     search: query.search,
     status: query.status,
     category: query.category,
     featured: query.featured,
     instructorId: query.instructorId,
+    page: query.page ? String(query.page) : undefined,
+    limit: query.limit ? String(query.limit) : undefined,
   })}`;
-  const data = await apiRequest<BackendCourse[]>(endpoint);
-  return data.map(mapCourse);
+  const payload = await apiRequestWithMeta<BackendCourse[]>(endpoint);
+
+  return {
+    items: payload.data.map(mapCourse),
+    total: payload.pagination?.total || payload.total || payload.count || payload.data.length,
+    page: payload.pagination?.page || query.page || 1,
+    limit: payload.pagination?.limit || query.limit || payload.data.length,
+    totalPages: payload.pagination?.totalPages || 1,
+    hasNext: payload.pagination?.hasNext || false,
+    hasPrev: payload.pagination?.hasPrev || false,
+  };
 }
 
 export async function updateModerationCourseStatus(

@@ -1,8 +1,15 @@
 import { Response } from 'express';
+import mongoose from 'mongoose';
 import Enrollment from '../models/Enrollment';
 import Course from '../models/Course';
 import Activity from '../models/Activity';
 import { AuthRequest } from '../middleware/auth';
+import {
+  calculateProgressPercentage,
+  canEnrollInCourseStatus,
+  getCourseLessonIds,
+  toggleCompletedLesson,
+} from '../utils/enrollmentProgress';
 
 // @desc    Enroll in course
 // @route   POST /api/enrollments/:courseId
@@ -19,7 +26,7 @@ export const enrollCourse = async (req: AuthRequest, res: Response) => {
       });
     }
     
-    if (!['published', 'pending_unpublish'].includes(course.status)) {
+    if (!canEnrollInCourseStatus(course.status)) {
       return res.status(400).json({
         success: false,
         message: 'Course is not available for enrollment',
@@ -130,6 +137,13 @@ export const getProgress = async (req: AuthRequest, res: Response) => {
 export const updateProgress = async (req: AuthRequest, res: Response) => {
   try {
     const { lessonId, completed } = req.body;
+
+    if (!lessonId) {
+      return res.status(400).json({
+        success: false,
+        message: 'lessonId is required',
+      });
+    }
     
     const enrollment = await Enrollment.findOne({
       studentId: req.user?._id,
@@ -143,24 +157,27 @@ export const updateProgress = async (req: AuthRequest, res: Response) => {
       });
     }
     
-    // Update completed lessons
-    if (completed && !enrollment.completedLessons.includes(lessonId)) {
-      enrollment.completedLessons.push(lessonId);
-    } else if (!completed) {
-      enrollment.completedLessons = enrollment.completedLessons.filter(
-        (id) => id.toString() !== lessonId
-      );
+    const course = enrollment.courseId as any;
+    const allLessonIds = getCourseLessonIds(course.sections || []);
+    const totalLessons = allLessonIds.length;
+
+    const normalizedLessonId = String(lessonId);
+    if (!allLessonIds.includes(normalizedLessonId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid lessonId for this course',
+      });
     }
+
+    const nextCompletedIds = toggleCompletedLesson(
+      enrollment.completedLessons.map((id) => id.toString()),
+      normalizedLessonId,
+      Boolean(completed),
+    );
+    enrollment.completedLessons = nextCompletedIds.map((id) => new mongoose.Types.ObjectId(id));
     
     // Calculate progress
-    const course = enrollment.courseId as any;
-    const totalLessons = course.sections.reduce(
-      (acc: number, section: any) => acc + section.lessons.length,
-      0
-    );
-    enrollment.progress = totalLessons > 0 
-      ? Math.round((enrollment.completedLessons.length / totalLessons) * 100)
-      : 0;
+    enrollment.progress = calculateProgressPercentage(nextCompletedIds.length, totalLessons);
     
     enrollment.lastAccessed = new Date();
     await enrollment.save();

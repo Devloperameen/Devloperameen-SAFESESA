@@ -47,7 +47,7 @@ A complete, production-ready Learning Management System with role-based access c
 
 ```
 SKILL FINAL PROJECT/
-├── eduflow-backend/          # Backend API
+├── backend/          # Backend API
 │   ├── src/
 │   │   ├── controllers/      # Business logic
 │   │   ├── models/           # Database models
@@ -56,7 +56,7 @@ SKILL FINAL PROJECT/
 │   │   └── server.ts         # Entry point
 │   └── package.json
 │
-├── eduflow-admin-hub-eebbc729/  # Frontend App
+├── frontend/  # Frontend App
 │   ├── src/
 │   │   ├── components/       # React components
 │   │   ├── pages/            # Page components
@@ -83,8 +83,7 @@ cd new-Edu-market
 
 ### 2. Setup Backend
 ```bash
-cd eduflow-backend
-npm install
+cd backend`r`nnpm install
 ```
 
 Create `.env` file:
@@ -110,7 +109,7 @@ Backend runs on: http://localhost:5000
 
 ### 3. Setup Frontend
 ```bash
-cd eduflow-admin-hub-eebbc729
+cd frontend
 npm install
 ```
 
@@ -187,10 +186,10 @@ Frontend runs on: http://localhost:5173
 
 ## 📖 Documentation
 
-- [Backend Documentation](./eduflow-backend/README.md)
-- [API Documentation](./eduflow-backend/API_DOCUMENTATION.md)
-- [Installation Guide](./eduflow-backend/INSTALLATION_GUIDE.md)
-- [Deployment Guide](./eduflow-backend/DEPLOYMENT.md)
+- [Backend Documentation](./backend/README.md)
+- [API Documentation](./backend/API_DOCUMENTATION.md)
+- [Installation Guide](./backend/INSTALLATION_GUIDE.md)
+- [Deployment Guide](./backend/DEPLOYMENT.md)
 - [Integration Guide](./INTEGRATION_COMPLETE.md)
 
 ## 🤝 Contributing

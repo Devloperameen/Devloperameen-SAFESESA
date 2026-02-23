@@ -14,6 +14,12 @@ interface MonthBucket {
   label: string;
 }
 
+interface ParsedPagination {
+  page: number;
+  limit: number;
+  skip: number;
+}
+
 const buildRecentMonthBuckets = (monthCount: number): MonthBucket[] => {
   const now = new Date();
   const buckets: MonthBucket[] = [];
@@ -30,12 +36,31 @@ const buildRecentMonthBuckets = (monthCount: number): MonthBucket[] => {
   return buckets;
 };
 
+const parsePagination = (pageValue: unknown, limitValue: unknown, defaults?: { limit?: number; maxLimit?: number }): ParsedPagination => {
+  const defaultLimit = defaults?.limit || 12;
+  const maxLimit = defaults?.maxLimit || 100;
+
+  const parsedPage = Number.parseInt(String(pageValue || '1'), 10);
+  const parsedLimit = Number.parseInt(String(limitValue || String(defaultLimit)), 10);
+
+  const page = Number.isNaN(parsedPage) || parsedPage < 1 ? 1 : parsedPage;
+  const limit = Number.isNaN(parsedLimit) || parsedLimit < 1
+    ? defaultLimit
+    : Math.min(parsedLimit, maxLimit);
+
+  return {
+    page,
+    limit,
+    skip: (page - 1) * limit,
+  };
+};
+
 // @desc    Get all courses
 // @route   GET /api/courses
 // @access  Public
 export const getCourses = async (req: AuthRequest, res: Response) => {
   try {
-    const { category, search, status, level, featured, free } = req.query;
+    const { category, search, status, level, featured, free, page, limit } = req.query;
     
     const query: any = {};
     
@@ -44,9 +69,18 @@ export const getCourses = async (req: AuthRequest, res: Response) => {
     // Public users only see published content and courses pending unpublish approval.
     if (status) {
       if (req.user?.role === 'admin') {
-        query.status = status;
-      } else if (publicStatuses.includes(String(status))) {
-        query.status = status;
+        const statusValues = String(status)
+          .split(',')
+          .map((value) => value.trim())
+          .filter(Boolean);
+
+        if (statusValues.length === 1) {
+          query.status = statusValues[0];
+        } else if (statusValues.length > 1) {
+          query.status = { $in: statusValues };
+        }
+      } else if (publicStatuses.includes(String(status).trim())) {
+        query.status = String(status).trim();
       } else {
         query.status = { $in: publicStatuses };
       }
@@ -54,8 +88,32 @@ export const getCourses = async (req: AuthRequest, res: Response) => {
       query.status = { $in: publicStatuses };
     }
     
-    if (category) query.category = category;
-    if (level) query.level = level;
+    if (category) {
+      const categories = String(category)
+        .split(',')
+        .map((value) => value.trim())
+        .filter(Boolean);
+
+      if (categories.length === 1) {
+        query.category = categories[0];
+      } else if (categories.length > 1) {
+        query.category = { $in: categories };
+      }
+    }
+
+    if (level) {
+      const levels = String(level)
+        .split(',')
+        .map((value) => value.trim())
+        .filter(Boolean);
+
+      if (levels.length === 1) {
+        query.level = levels[0];
+      } else if (levels.length > 1) {
+        query.level = { $in: levels };
+      }
+    }
+
     if (featured === 'true') query.isFeatured = true;
     if (free === 'true') query.price = 0;
     
@@ -63,14 +121,28 @@ export const getCourses = async (req: AuthRequest, res: Response) => {
     if (search) {
       query.$text = { $search: search as string };
     }
+
+    const pagination = parsePagination(page, limit, { limit: 12, maxLimit: 100 });
+    const total = await Course.countDocuments(query);
     
     const courses = await Course.find(query)
       .populate('instructorId', 'profile.name profile.avatar email')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .skip(pagination.skip)
+      .limit(pagination.limit);
     
     res.json({
       success: true,
       count: courses.length,
+      total,
+      pagination: {
+        page: pagination.page,
+        limit: pagination.limit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / pagination.limit)),
+        hasNext: pagination.page * pagination.limit < total,
+        hasPrev: pagination.page > 1,
+      },
       data: courses,
     });
   } catch (error) {
@@ -182,6 +254,11 @@ export const createCourse = async (req: AuthRequest, res: Response) => {
 // @access  Private (Instructor - own courses)
 export const updateCourse = async (req: AuthRequest, res: Response) => {
   try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, errors: errors.array() });
+    }
+
     let course = await Course.findById(req.params.id);
     
     if (!course) {
@@ -414,13 +491,107 @@ export const deleteCourse = async (req: AuthRequest, res: Response) => {
 // @access  Private (Instructor)
 export const getInstructorCourses = async (req: AuthRequest, res: Response) => {
   try {
-    const courses = await Course.find({ instructorId: req.user?._id })
-      .sort({ createdAt: -1 });
+    const { page, limit } = req.query;
+    const pagination = parsePagination(page, limit, { limit: 20, maxLimit: 100 });
+    const query = { instructorId: req.user?._id };
+    const total = await Course.countDocuments(query);
+
+    const courses = await Course.find(query)
+      .sort({ createdAt: -1 })
+      .skip(pagination.skip)
+      .limit(pagination.limit);
     
     res.json({
       success: true,
       count: courses.length,
+      total,
+      pagination: {
+        page: pagination.page,
+        limit: pagination.limit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / pagination.limit)),
+        hasNext: pagination.page * pagination.limit < total,
+        hasPrev: pagination.page > 1,
+      },
       data: courses,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+    });
+  }
+};
+
+// @desc    Get enrolled students for a specific instructor course
+// @route   GET /api/courses/instructor/:id/students
+// @access  Private (Instructor - own course)
+export const getInstructorCourseStudents = async (req: AuthRequest, res: Response) => {
+  try {
+    const course = await Course.findById(req.params.id).select('title instructorId');
+
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: 'Course not found',
+      });
+    }
+
+    if (course.instructorId.toString() !== req.user?._id.toString() && req.user?.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to view enrolled students for this course',
+      });
+    }
+
+    const { page, limit } = req.query;
+    const pagination = parsePagination(page, limit, { limit: 20, maxLimit: 100 });
+    const query = { courseId: course._id };
+
+    const [enrollments, total] = await Promise.all([
+      Enrollment.find(query)
+        .populate('studentId', 'profile.name profile.avatar email status')
+        .sort({ enrolledAt: -1 })
+        .skip(pagination.skip)
+        .limit(pagination.limit)
+        .lean(),
+      Enrollment.countDocuments(query),
+    ]);
+
+    const students = enrollments.map((enrollment: any) => {
+      const studentRef = enrollment.studentId;
+      return {
+        enrollmentId: enrollment._id.toString(),
+        studentId: studentRef?._id?.toString() || '',
+        name: studentRef?.profile?.name || 'Student',
+        email: studentRef?.email || '',
+        avatar: studentRef?.profile?.avatar || '',
+        status: studentRef?.status || 'active',
+        progress: Number(enrollment.progress) || 0,
+        enrolledAt: enrollment.enrolledAt,
+        lastAccessed: enrollment.lastAccessed,
+      };
+    });
+
+    res.json({
+      success: true,
+      count: students.length,
+      total,
+      pagination: {
+        page: pagination.page,
+        limit: pagination.limit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / pagination.limit)),
+        hasNext: pagination.page * pagination.limit < total,
+        hasPrev: pagination.page > 1,
+      },
+      data: {
+        course: {
+          id: course._id,
+          title: course.title,
+        },
+        students,
+      },
     });
   } catch (error) {
     res.status(500).json({
@@ -457,7 +628,10 @@ export const getInstructorStats = async (req: AuthRequest, res: Response) => {
       ]),
     ]);
     
-    const totalStudents = courses.reduce((sum, course) => sum + course.students, 0);
+    const courseIds = courses.map((course) => course._id);
+    const totalStudents = courseIds.length > 0
+      ? await Enrollment.countDocuments({ courseId: { $in: courseIds } })
+      : 0;
     const totalCourses = courses.length;
     const avgRating = courses.length > 0
       ? courses.reduce((sum, course) => sum + course.rating, 0) / courses.length
@@ -472,6 +646,80 @@ export const getInstructorStats = async (req: AuthRequest, res: Response) => {
         avgRating: avgRating.toFixed(1),
         totalEarnings,
       },
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+    });
+  }
+};
+
+// @desc    Get instructor messages (reviews + admin rejection notes)
+// @route   GET /api/courses/instructor/messages
+// @access  Private (Instructor)
+export const getInstructorMessages = async (req: AuthRequest, res: Response) => {
+  try {
+    const instructorCourses = await Course.find({ instructorId: req.user?._id })
+      .select('_id title status rejectionReason updatedAt')
+      .lean();
+
+    const courseIds = instructorCourses.map((course: any) => course._id);
+
+    const reviewRows = courseIds.length > 0
+      ? await Review.find({ courseId: { $in: courseIds } })
+          .sort({ createdAt: -1 })
+          .populate('studentId', 'profile.name')
+          .populate('courseId', 'title')
+          .lean()
+      : [];
+
+    const reviewMessages = reviewRows.map((review: any) => {
+      const courseRef = review.courseId;
+      const studentRef = review.studentId;
+      const studentName =
+        studentRef && typeof studentRef === 'object' && studentRef.profile?.name
+          ? studentRef.profile.name
+          : 'Student';
+      const courseTitle =
+        courseRef && typeof courseRef === 'object' && courseRef.title
+          ? courseRef.title
+          : 'Course';
+      const message = review.comment
+        ? `${studentName} rated ${review.rating}/5: ${review.comment}`
+        : `${studentName} rated ${review.rating}/5.`;
+
+      return {
+        id: `review-${review._id}`,
+        type: 'review',
+        title: `New review on "${courseTitle}"`,
+        message,
+        courseTitle,
+        sender: studentName,
+        createdAt: review.createdAt,
+      };
+    });
+
+    const rejectionMessages = instructorCourses
+      .filter((course: any) => course.status === 'rejected')
+      .map((course: any) => ({
+        id: `rejection-${course._id}-${new Date(course.updatedAt).getTime()}`,
+        type: 'admin_rejection',
+        title: `Publish request rejected for "${course.title}"`,
+        message: course.rejectionReason || 'Admin rejected the publish request.',
+        courseTitle: course.title,
+        sender: 'Admin',
+        createdAt: course.updatedAt,
+      }));
+
+    const allMessages = [...reviewMessages, ...rejectionMessages].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
+
+    res.json({
+      success: true,
+      count: allMessages.length,
+      data: allMessages,
     });
   } catch (error) {
     res.status(500).json({
@@ -563,13 +811,29 @@ export const getInstructorRevenue = async (req: AuthRequest, res: Response) => {
 // @access  Public
 export const getCourseReviews = async (req: AuthRequest, res: Response) => {
   try {
-    const reviews = await Review.find({ courseId: req.params.id })
+    const { page, limit } = req.query;
+    const pagination = parsePagination(page, limit, { limit: 10, maxLimit: 50 });
+    const query = { courseId: req.params.id };
+    const total = await Review.countDocuments(query);
+
+    const reviews = await Review.find(query)
       .sort({ createdAt: -1 })
-      .populate('studentId', 'profile.name profile.avatar');
+      .populate('studentId', 'profile.name profile.avatar')
+      .skip(pagination.skip)
+      .limit(pagination.limit);
 
     res.json({
       success: true,
       count: reviews.length,
+      total,
+      pagination: {
+        page: pagination.page,
+        limit: pagination.limit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / pagination.limit)),
+        hasNext: pagination.page * pagination.limit < total,
+        hasPrev: pagination.page > 1,
+      },
       data: reviews,
     });
   } catch (error) {

@@ -4,9 +4,11 @@ import {
   BookOpen,
   GraduationCap,
   Heart,
+  CreditCard,
   LayoutDashboard,
   Library,
   DollarSign,
+  MessageSquare,
   Menu,
   X,
   ChevronDown,
@@ -27,12 +29,14 @@ const studentLinks = [
   { label: "Browse Courses", to: "/courses", icon: BookOpen },
   { label: "My Learning", to: "/my-learning", icon: GraduationCap },
   { label: "Favorites", to: "/favorites", icon: Heart },
+  { label: "Payment", to: "/payment", icon: CreditCard },
 ];
 
 const instructorLinks = [
   { label: "Dashboard", to: "/instructor", icon: LayoutDashboard },
   { label: "My Courses", to: "/instructor/courses", icon: Library },
   { label: "Revenue", to: "/instructor/revenue", icon: DollarSign },
+  { label: "Messages", to: "/instructor/messages", icon: MessageSquare },
 ];
 
 export default function Navbar() {

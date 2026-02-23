@@ -11,6 +11,12 @@ interface MonthBucket {
   label: string;
 }
 
+interface ParsedPagination {
+  page: number;
+  limit: number;
+  skip: number;
+}
+
 const buildRecentMonthBuckets = (monthCount: number): MonthBucket[] => {
   const now = new Date();
   const buckets: MonthBucket[] = [];
@@ -29,12 +35,31 @@ const buildRecentMonthBuckets = (monthCount: number): MonthBucket[] => {
 
 const escapeRegex = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+const parsePagination = (pageValue: unknown, limitValue: unknown, defaults?: { limit?: number; maxLimit?: number }): ParsedPagination => {
+  const defaultLimit = defaults?.limit || 20;
+  const maxLimit = defaults?.maxLimit || 100;
+
+  const parsedPage = Number.parseInt(String(pageValue || '1'), 10);
+  const parsedLimit = Number.parseInt(String(limitValue || String(defaultLimit)), 10);
+
+  const page = Number.isNaN(parsedPage) || parsedPage < 1 ? 1 : parsedPage;
+  const limit = Number.isNaN(parsedLimit) || parsedLimit < 1
+    ? defaultLimit
+    : Math.min(parsedLimit, maxLimit);
+
+  return {
+    page,
+    limit,
+    skip: (page - 1) * limit,
+  };
+};
+
 // @desc    Get all users
 // @route   GET /api/admin/users
 // @access  Private (Admin)
 export const getUsers = async (req: AuthRequest, res: Response) => {
   try {
-    const { search, role, status } = req.query;
+    const { search, role, status, page, limit } = req.query;
     
     const query: any = {};
     if (role) query.role = role;
@@ -46,11 +71,26 @@ export const getUsers = async (req: AuthRequest, res: Response) => {
       ];
     }
     
-    const users = await User.find(query).sort({ createdAt: -1 });
+    const pagination = parsePagination(page, limit, { limit: 20, maxLimit: 100 });
+    const total = await User.countDocuments(query);
+
+    const users = await User.find(query)
+      .sort({ createdAt: -1 })
+      .skip(pagination.skip)
+      .limit(pagination.limit);
     
     res.json({
       success: true,
       count: users.length,
+      total,
+      pagination: {
+        page: pagination.page,
+        limit: pagination.limit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / pagination.limit)),
+        hasNext: pagination.page * pagination.limit < total,
+        hasPrev: pagination.page > 1,
+      },
       data: users,
     });
   } catch (error) {
@@ -144,7 +184,7 @@ export const updateUserStatus = async (req: AuthRequest, res: Response) => {
 // @access  Private (Admin)
 export const getCoursesForModeration = async (req: AuthRequest, res: Response) => {
   try {
-    const { search, status, category, featured, instructorId } = req.query;
+    const { search, status, category, featured, instructorId, page, limit } = req.query;
 
     const query: any = {};
 
@@ -184,13 +224,27 @@ export const getCoursesForModeration = async (req: AuthRequest, res: Response) =
       ];
     }
 
+    const pagination = parsePagination(page, limit, { limit: 20, maxLimit: 100 });
+    const total = await Course.countDocuments(query);
+
     const courses = await Course.find(query)
       .populate('instructorId', 'profile.name profile.avatar email')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .skip(pagination.skip)
+      .limit(pagination.limit);
 
     res.json({
       success: true,
       count: courses.length,
+      total,
+      pagination: {
+        page: pagination.page,
+        limit: pagination.limit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / pagination.limit)),
+        hasNext: pagination.page * pagination.limit < total,
+        hasPrev: pagination.page > 1,
+      },
       data: courses,
     });
   } catch (error) {
@@ -240,9 +294,16 @@ export const updateCourseStatus = async (req: AuthRequest, res: Response) => {
       });
     }
 
+    if (status === 'rejected' && !String(rejectionReason || '').trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Rejection reason is required when rejecting a publish request',
+      });
+    }
+
     const updateData: any = { status };
-    if (status === 'rejected' && rejectionReason) {
-      updateData.rejectionReason = rejectionReason;
+    if (status === 'rejected') {
+      updateData.rejectionReason = String(rejectionReason).trim();
     } else if (status !== 'rejected') {
       updateData.rejectionReason = undefined;
     }

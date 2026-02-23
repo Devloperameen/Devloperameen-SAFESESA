@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Search, MoreHorizontal } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import AnimatedPage from "@/components/AnimatedPage";
-import { getAdminUsers, updateAdminUserRole, updateAdminUserStatus } from "@/services/adminService";
+import { getAdminUsersPage, updateAdminUserRole, updateAdminUserStatus } from "@/services/adminService";
 import type { PlatformUser } from "@/types/models";
 import { toast } from "sonner";
 
@@ -20,6 +20,8 @@ export default function UserManagement() {
   const [statusFilter, setStatusFilter] = useState<"all" | PlatformUser["status"]>("all");
   const [selectedUser, setSelectedUser] = useState<PlatformUser | null>(null);
   const [selectedRole, setSelectedRole] = useState<PlatformUser["role"]>("student");
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
 
   const queryFilters = {
     search: search.trim() || undefined,
@@ -27,10 +29,20 @@ export default function UserManagement() {
     status: statusFilter === "all" ? undefined : statusFilter,
   };
 
-  const { data: users = [], isLoading, isError } = useQuery({
-    queryKey: ["admin", "users", queryFilters.search, queryFilters.role, queryFilters.status],
-    queryFn: () => getAdminUsers(queryFilters),
+  useEffect(() => {
+    setPage(1);
+  }, [queryFilters.search, queryFilters.role, queryFilters.status]);
+
+  const { data: pagedUsers, isLoading, isError } = useQuery({
+    queryKey: ["admin", "users", queryFilters.search, queryFilters.role, queryFilters.status, page],
+    queryFn: () => getAdminUsersPage({ ...queryFilters, page, limit: pageSize }),
   });
+
+  const users = pagedUsers?.items || [];
+  const totalUsers = pagedUsers?.total || 0;
+  const totalPages = pagedUsers?.totalPages || 1;
+  const hasPrev = pagedUsers?.hasPrev || false;
+  const hasNext = pagedUsers?.hasNext || false;
 
   const roleMutation = useMutation({
     mutationFn: ({ userId, role }: { userId: string; role: PlatformUser["role"] }) =>
@@ -83,7 +95,7 @@ export default function UserManagement() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="font-display text-3xl font-bold">User Management</h1>
-            <p className="text-muted-foreground mt-1">{users.length} users found</p>
+            <p className="text-muted-foreground mt-1">{totalUsers.toLocaleString()} users found</p>
           </div>
           <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
             <div className="relative w-full sm:w-72">
@@ -170,6 +182,22 @@ export default function UserManagement() {
             </Table>
           )}
         </div>
+
+        {!isLoading && !isError && totalPages > 1 && (
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-muted-foreground">
+              Page {page} of {totalPages}
+            </p>
+            <div className="flex gap-2">
+              <Button variant="outline" disabled={!hasPrev} onClick={() => setPage((prev) => Math.max(1, prev - 1))}>
+                Previous
+              </Button>
+              <Button variant="outline" disabled={!hasNext} onClick={() => setPage((prev) => prev + 1)}>
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
 
         <Dialog open={Boolean(selectedUser)} onOpenChange={(open) => !open && setSelectedUser(null)}>
           <DialogContent>

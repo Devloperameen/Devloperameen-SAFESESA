@@ -26,6 +26,7 @@ export const register = async (req: AuthRequest, res: Response) => {
     }
 
     const { email, password, name, role } = req.body;
+    const requestedRole = role === 'instructor' ? 'instructor' : 'student';
 
     // Check if user exists
     const userExists = await User.findOne({ email });
@@ -41,14 +42,14 @@ export const register = async (req: AuthRequest, res: Response) => {
     const user = await User.create({
       email,
       password,
-      role: role || 'student',
+      role: requestedRole,
       profile: { name },
     });
 
     // Create activity
     await Activity.create({
       type: 'signup',
-      message: `${name} joined as ${role || 'student'}`,
+      message: `${name} joined as ${requestedRole}`,
       userId: user._id,
     });
 

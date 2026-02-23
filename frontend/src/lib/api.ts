@@ -2,9 +2,21 @@ export interface ApiValidationError {
   msg?: string;
 }
 
-interface ApiResponse<T> {
+export interface ApiPagination {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+}
+
+export interface ApiResponse<T> {
   success: boolean;
   data: T;
+  count?: number;
+  total?: number;
+  pagination?: ApiPagination;
   message?: string;
   errors?: ApiValidationError[];
 }
@@ -33,6 +45,14 @@ export async function apiRequest<T>(
   endpoint: string,
   options: ApiRequestOptions = {},
 ): Promise<T> {
+  const payload = await apiRequestWithMeta<T>(endpoint, options);
+  return payload.data;
+}
+
+export async function apiRequestWithMeta<T>(
+  endpoint: string,
+  options: ApiRequestOptions = {},
+): Promise<ApiResponse<T>> {
   const { method = "GET", body, token } = options;
 
   const headers: HeadersInit = {
@@ -68,5 +88,5 @@ export async function apiRequest<T>(
     throw new ApiError(message, response.status, payload?.errors);
   }
 
-  return payload.data;
+  return payload;
 }

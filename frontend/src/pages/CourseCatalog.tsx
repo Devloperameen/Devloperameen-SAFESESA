@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Search, SlidersHorizontal } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import AnimatedPage from "@/components/AnimatedPage";
 import CourseCard from "@/components/CourseCard";
-import { getCourses } from "@/services/courseService";
+import { getCoursesPage } from "@/services/courseService";
 import { getCategories } from "@/services/categoryService";
 import { cn } from "@/lib/utils";
 
@@ -19,6 +19,14 @@ export default function CourseCatalog() {
   const [featuredOnly, setFeaturedOnly] = useState(false);
   const [levelFilter, setLevelFilter] = useState<"all" | "beginner" | "intermediate" | "advanced">("all");
   const [showFilters, setShowFilters] = useState(false);
+  const [page, setPage] = useState(1);
+  const pageSize = 12;
+
+  const selectedCategoryFilter = useMemo(() => selectedCats.join(","), [selectedCats]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, selectedCategoryFilter, freeOnly, featuredOnly, levelFilter]);
 
   const { data: categories = [] } = useQuery({
     queryKey: ["categories"],
@@ -26,17 +34,20 @@ export default function CourseCatalog() {
   });
 
   const {
-    data: courses = [],
+    data: pagedCourses,
     isLoading,
     isError,
   } = useQuery({
-    queryKey: ["courses", "catalog", search, freeOnly, featuredOnly, levelFilter],
+    queryKey: ["courses", "catalog", search, selectedCategoryFilter, freeOnly, featuredOnly, levelFilter, page],
     queryFn: () =>
-      getCourses({
+      getCoursesPage({
         search: search || undefined,
+        category: selectedCategoryFilter || undefined,
         free: freeOnly ? true : undefined,
         featured: featuredOnly ? true : undefined,
         level: levelFilter === "all" ? undefined : levelFilter,
+        page,
+        limit: pageSize,
       }),
   });
 
@@ -47,13 +58,11 @@ export default function CourseCatalog() {
         : [...prev, categoryName],
     );
 
-  const filtered = useMemo(() => {
-    let result = courses;
-    if (selectedCats.length) {
-      result = result.filter((course) => selectedCats.includes(course.category));
-    }
-    return result;
-  }, [courses, selectedCats]);
+  const courses = pagedCourses?.items || [];
+  const totalCourses = pagedCourses?.total || 0;
+  const totalPages = pagedCourses?.totalPages || 1;
+  const hasPrev = pagedCourses?.hasPrev || false;
+  const hasNext = pagedCourses?.hasNext || false;
 
   return (
     <AnimatedPage>
@@ -124,7 +133,9 @@ export default function CourseCatalog() {
               </Button>
             </div>
 
-            <p className="text-sm text-muted-foreground mb-4">{filtered.length} courses found</p>
+            <p className="text-sm text-muted-foreground mb-4">
+              {totalCourses.toLocaleString()} courses found
+            </p>
 
             {isLoading ? (
               <div className="text-center py-16 text-muted-foreground">
@@ -136,15 +147,31 @@ export default function CourseCatalog() {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                {filtered.map((course) => (
+                {courses.map((course) => (
                   <CourseCard key={course.id} course={course} />
                 ))}
               </div>
             )}
 
-            {!isLoading && !isError && filtered.length === 0 && (
+            {!isLoading && !isError && courses.length === 0 && (
               <div className="text-center py-16 text-muted-foreground">
                 <p className="text-lg">No courses found matching your criteria</p>
+              </div>
+            )}
+
+            {!isLoading && !isError && totalPages > 1 && (
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-muted-foreground">
+                  Page {page} of {totalPages}
+                </p>
+                <div className="flex gap-2">
+                  <Button variant="outline" disabled={!hasPrev} onClick={() => setPage((prev) => Math.max(1, prev - 1))}>
+                    Previous
+                  </Button>
+                  <Button variant="outline" disabled={!hasNext} onClick={() => setPage((prev) => prev + 1)}>
+                    Next
+                  </Button>
+                </div>
               </div>
             )}
           </div>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Search, CheckCircle2, XCircle, Eye } from "lucide-react";
@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from "@/components/ui/textarea";
 import AnimatedPage from "@/components/AnimatedPage";
 import {
-  getModerationCourses,
+  getModerationCoursesPage,
   toggleModerationCourseFeatured,
   updateModerationCourseStatus,
 } from "@/services/adminService";
@@ -27,6 +27,8 @@ export default function CourseModeration() {
   const [featuredFilter, setFeaturedFilter] = useState<"all" | "featured" | "not_featured">("all");
   const [rejectId, setRejectId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
 
   const moderationFilters = {
     search: search.trim() || undefined,
@@ -40,13 +42,22 @@ export default function CourseModeration() {
           : ("false" as const),
   };
 
+  useEffect(() => {
+    setPage(1);
+  }, [
+    moderationFilters.search,
+    moderationFilters.status,
+    moderationFilters.category,
+    moderationFilters.featured,
+  ]);
+
   const { data: categories = [] } = useQuery({
     queryKey: ["categories", "all"],
     queryFn: () => getCategories("all"),
   });
 
   const {
-    data: courses = [],
+    data: pagedCourses,
     isLoading,
     isError,
   } = useQuery({
@@ -57,9 +68,16 @@ export default function CourseModeration() {
       moderationFilters.status,
       moderationFilters.category,
       moderationFilters.featured,
+      page,
     ],
-    queryFn: () => getModerationCourses(moderationFilters),
+    queryFn: () => getModerationCoursesPage({ ...moderationFilters, page, limit: pageSize }),
   });
+
+  const courses = pagedCourses?.items || [];
+  const totalCourses = pagedCourses?.total || 0;
+  const totalPages = pagedCourses?.totalPages || 1;
+  const hasPrev = pagedCourses?.hasPrev || false;
+  const hasNext = pagedCourses?.hasNext || false;
 
   const featureMutation = useMutation({
     mutationFn: (courseId: string) => toggleModerationCourseFeatured(courseId),
@@ -109,7 +127,7 @@ export default function CourseModeration() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="font-display text-3xl font-bold">Course Moderation</h1>
-            <p className="text-muted-foreground mt-1">{courses.length} courses found</p>
+            <p className="text-muted-foreground mt-1">{totalCourses.toLocaleString()} courses found</p>
           </div>
           <div className="grid w-full gap-3 sm:w-auto sm:grid-cols-2 lg:grid-cols-4">
             <div className="relative sm:w-72">
@@ -289,6 +307,22 @@ export default function CourseModeration() {
           )}
         </div>
 
+        {!isLoading && !isError && totalPages > 1 && (
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-muted-foreground">
+              Page {page} of {totalPages}
+            </p>
+            <div className="flex gap-2">
+              <Button variant="outline" disabled={!hasPrev} onClick={() => setPage((prev) => Math.max(1, prev - 1))}>
+                Previous
+              </Button>
+              <Button variant="outline" disabled={!hasNext} onClick={() => setPage((prev) => prev + 1)}>
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
+
         <Dialog open={Boolean(rejectId)} onOpenChange={(open) => { if (!open) { setRejectId(null); setRejectReason(""); } }}>
           <DialogContent>
             <DialogHeader>
@@ -302,10 +336,14 @@ export default function CourseModeration() {
                 variant="destructive"
                 onClick={() => {
                   if (!rejectId) return;
+                  if (!rejectReason.trim()) {
+                    toast.error("Please provide a rejection message.");
+                    return;
+                  }
                   statusMutation.mutate({
                     courseId: rejectId,
                     status: "rejected",
-                    rejectionReasonValue: rejectReason,
+                    rejectionReasonValue: rejectReason.trim(),
                     successMessage: "Publish request rejected",
                   });
                 }}
