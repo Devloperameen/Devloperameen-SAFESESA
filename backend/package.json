@@ -4,12 +4,10 @@
   "description": "Production-ready backend for EduFlow platform serving both marketplace and admin hub",
   "main": "dist/server.js",
   "scripts": {
-    "dev": "nodemon",
-    "build": "tsc",
     "start": "node dist/server.js",
-    "seed": "ts-node --project tsconfig.dev.json src/scripts/seed.ts",
-    "lint": "eslint src --ext .ts",
-    "test": "node --test -r ts-node/register src/**/*.test.ts"
+    "dev": "nodemon src/server.ts",
+    "seed": "ts-node src/utils/seed.ts",
+    "build": "tsc"
   },
   "keywords": [
     "eduflow",
@@ -17,35 +15,31 @@
     "mongodb",
     "typescript"
   ],
-  "author": "",
-  "license": "MIT",
+  "author": "EduFlow Team",
+  "license": "ISC",
   "dependencies": {
     "bcryptjs": "^2.4.3",
-    "compression": "^1.7.4",
+    "compression": "^1.7.5",
     "cors": "^2.8.5",
-    "dotenv": "^16.3.1",
-    "express": "^4.18.2",
-    "express-rate-limit": "^7.1.5",
-    "express-validator": "^7.0.1",
-    "helmet": "^7.1.0",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "express-validator": "^7.2.1",
+    "helmet": "^8.0.0",
     "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.0.3",
-    "morgan": "^1.10.0",
-    "slugify": "^1.6.6"
+    "mongoose": "^8.9.5",
+    "morgan": "^1.10.0"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
     "@types/compression": "^1.7.5",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
-    "@types/jsonwebtoken": "^9.0.5",
+    "@types/jsonwebtoken": "^9.0.8",
     "@types/morgan": "^1.9.9",
-    "@types/node": "^20.10.6",
-    "@typescript-eslint/eslint-plugin": "^8.56.0",
-    "@typescript-eslint/parser": "^8.56.0",
-    "eslint": "^10.0.1",
-    "nodemon": "^3.0.2",
+    "@types/node": "^22.10.10",
+    "nodemon": "^3.1.9",
     "ts-node": "^10.9.2",
-    "typescript": "^5.3.3"
+    "typescript": "^5.7.3"
   }
 }

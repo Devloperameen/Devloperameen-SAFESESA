@@ -95,22 +95,53 @@ export default function CourseDetails() {
 
   return (
     <AnimatedPage>
-      <div className="w-full" style={{ background: course.thumbnail }}>
-        <div className="container py-12 md:py-16">
-          <div className="max-w-2xl space-y-4">
-            <Badge variant="secondary" className="bg-primary-foreground/20 text-primary-foreground border-0">{course.category}</Badge>
-            <h1 className="font-display text-3xl md:text-4xl font-bold text-primary-foreground">{course.title}</h1>
-            <p className="text-primary-foreground/80 leading-relaxed">{course.shortDescription}</p>
-            <div className="flex flex-wrap items-center gap-4 text-sm text-primary-foreground/80">
-              <div className="flex items-center gap-1">
-                <Star className="h-4 w-4 fill-star text-star" />
-                <span className="font-semibold text-primary-foreground">{course.rating}</span>
-                <span>({course.reviewCount.toLocaleString()} reviews)</span>
-              </div>
-              <div className="flex items-center gap-1"><Users className="h-4 w-4" />{course.students.toLocaleString()} students</div>
-              <div className="flex items-center gap-1"><BarChart3 className="h-4 w-4" />{course.level}</div>
+      <div className="relative w-full min-h-[400px] flex items-center overflow-hidden bg-slate-900">
+        {/* Background Image with Overlay */}
+        <div className="absolute inset-0 z-0">
+          <img
+            src={course.thumbnail}
+            alt={course.title}
+            className="w-full h-full object-cover opacity-30 blur-[2px]"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent" />
+        </div>
+
+        <div className="container relative z-10 py-12 md:py-20">
+          <div className="max-w-3xl space-y-6">
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="secondary" className="bg-primary/20 text-primary border-0 hover:bg-primary/30 transition-colors uppercase tracking-wider text-[10px] font-bold">
+                {course.category}
+              </Badge>
+              <Badge variant="outline" className="text-white border-white/20 capitalize">
+                {course.level}
+              </Badge>
             </div>
-            <p className="text-primary-foreground/70 text-sm">Created by <span className="text-primary-foreground underline">{course.instructor}</span></p>
+
+            <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-[1.1] drop-shadow-md">
+              {course.title}
+            </h1>
+
+            <p className="text-xl text-slate-300 leading-relaxed max-w-2xl font-light">
+              {course.shortDescription}
+            </p>
+
+            <div className="flex flex-wrap items-center gap-6 text-sm text-slate-300">
+              <div className="flex items-center gap-2 bg-white/5 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
+                <Star className="h-4 w-4 fill-star text-star" />
+                <span className="font-bold text-white">{course.rating}</span>
+                <span className="opacity-70">({course.reviewCount.toLocaleString()} reviews)</span>
+              </div>
+              <div className="flex items-center gap-2"><Users className="h-4 w-4 text-primary" />{course.students.toLocaleString()} students enrolled</div>
+            </div>
+
+            <div className="flex items-center gap-3 pt-2">
+              <div className="h-10 w-10 rounded-full border border-white/20 flex items-center justify-center bg-white/10 text-white font-bold text-xs uppercase">
+                {course.instructor.split(" ").map((name) => name[0]).join("")}
+              </div>
+              <p className="text-sm text-slate-300">
+                Created by <span className="text-white font-semibold underline decoration-primary/50 underline-offset-4">{course.instructor}</span>
+              </p>
+            </div>
           </div>
         </div>
       </div>

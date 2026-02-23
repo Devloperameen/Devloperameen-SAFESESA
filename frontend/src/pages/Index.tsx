@@ -8,6 +8,7 @@ import CourseCard from "@/components/CourseCard";
 import heroBanner from "@/assets/eduflow-hero.png";
 import { getCourses } from "@/services/courseService";
 import { useAuth } from "@/contexts/AuthContext";
+import MotivationalQuote from "@/components/MotivationalQuote";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -20,7 +21,7 @@ const containerVariants = {
   },
 };
 
-const itemVariants = {
+const itemVariants: any = {
   hidden: { opacity: 0, y: 20 },
   visible: {
     opacity: 1,
@@ -104,6 +105,8 @@ export default function Index() {
           </motion.div>
         </div>
       </section>
+
+      <MotivationalQuote />
 
       {/* Stats */}
       <section className="border-b border-border bg-card">
