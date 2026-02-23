@@ -1,12 +1,33 @@
 import { Link } from "react-router-dom";
 import { ArrowRight, BookOpen, Users, Award, TrendingUp } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import AnimatedPage from "@/components/AnimatedPage";
 import CourseCard from "@/components/CourseCard";
-import heroBanner from "@/assets/hero-banner.jpg";
+import heroBanner from "@/assets/eduflow-hero.png";
 import { getCourses } from "@/services/courseService";
 import { useAuth } from "@/contexts/AuthContext";
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.2,
+      delayChildren: 0.3,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.6, ease: "easeOut" },
+  },
+};
 
 const stats = [
   { icon: BookOpen, label: "Courses", value: "200+" },
@@ -30,32 +51,56 @@ export default function Index() {
   return (
     <AnimatedPage>
       {/* Hero */}
-      <section className="relative overflow-hidden">
+      <section className="relative h-[80vh] min-h-[600px] overflow-hidden">
         <div className="absolute inset-0 z-0">
-          <img src={heroBanner} alt="" className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-r from-foreground/90 via-foreground/70 to-foreground/40" />
+          <motion.img
+            initial={{ scale: 1.1, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 1.5, ease: "easeOut" }}
+            src={heroBanner}
+            alt="EduFlow Learning Marketplace"
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-background/95 via-background/70 to-transparent" />
         </div>
-        <div className="container relative z-10 py-24 md:py-32">
-          <div className="max-w-2xl space-y-6">
-            <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold text-primary-foreground leading-tight">
-              Learn Without Limits
-            </h1>
-            <p className="text-lg text-primary-foreground/80 leading-relaxed max-w-lg">
-              Unlock your potential with world-class courses taught by industry experts. Start your journey today.
-            </p>
-            <div className="flex flex-wrap gap-3">
-              <Button asChild size="lg" className="gradient-primary border-0 text-primary-foreground font-semibold">
+
+        <div className="container relative z-10 h-full flex items-center">
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="max-w-2xl space-y-8"
+          >
+            <motion.h1
+              variants={itemVariants}
+              className="font-display text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight text-foreground leading-[1.1]"
+            >
+              Elevate Your <span className="text-primary italic">Skills</span> with EduFlow
+            </motion.h1>
+
+            <motion.p
+              variants={itemVariants}
+              className="text-xl text-muted-foreground leading-relaxed max-w-lg"
+            >
+              Master top-tier industries with world-class courses taught by leading experts and visionaries. Your future starts now.
+            </motion.p>
+
+            <motion.div
+              variants={itemVariants}
+              className="flex flex-wrap gap-4 pt-4"
+            >
+              <Button asChild size="lg" className="h-14 px-8 text-lg font-semibold rounded-full shadow-lg hover:shadow-primary/20 transition-all duration-300">
                 <Link to="/courses">
-                  Explore Courses <ArrowRight className="ml-1 h-4 w-4" />
+                  Start Learning <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
               </Button>
               {showInstructorCta && (
-                <Button asChild variant="outline" size="lg" className="bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/20 hover:text-primary-foreground">
+                <Button asChild variant="outline" size="lg" className="h-14 px-8 text-lg font-semibold rounded-full border-2 hover:bg-secondary/50 transition-all duration-300">
                   <Link to={instructorCta.to}>{instructorCta.label}</Link>
                 </Button>
               )}
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         </div>
       </section>
 
