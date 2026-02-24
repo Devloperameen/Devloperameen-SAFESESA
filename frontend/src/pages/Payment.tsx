@@ -213,17 +213,16 @@ export default function Payment() {
                               <h3 className="text-sm font-black text-white uppercase tracking-widest">Payment Target</h3>
                             </div>
                             <div className="bg-slate-950/60 p-6 rounded-3xl border border-slate-800/80 space-y-4">
-                              <div>
-                                <p className="text-[9px] font-black text-slate-600 uppercase tracking-[0.2em] mb-1">Corporate Entity</p>
-                                <p className="text-sm font-bold text-slate-200 uppercase">EduFlow Enterprise Solutions</p>
+                              <div className="flex items-start gap-3">
+                                <Info className="h-6 w-6 text-amber-500 shrink-0 mt-1" />
+                                <div>
+                                  <p className="text-sm font-bold text-amber-500 uppercase mb-2">Intentional Notice</p>
+                                  <p className="text-xs text-slate-300 leading-relaxed font-medium">The payment gateway integration is currently intentionally non-functional and in development. It will be fully implemented soon.</p>
+                                </div>
                               </div>
-                              <div>
-                                <p className="text-[9px] font-black text-slate-600 uppercase tracking-[0.2em] mb-1">Account Dispatch</p>
-                                <p className="text-xs font-mono text-primary">Swift Code: EDF-889-XQ-22</p>
-                              </div>
-                              <div className="pt-2 border-t border-slate-800/50">
-                                <p className="text-[9px] text-slate-500 font-medium leading-relaxed uppercase">
-                                  * Submit check or wire transfer to the account above before providing reference.
+                              <div className="pt-4 border-t border-slate-800/50">
+                                <p className="text-[10px] text-slate-500 font-bold leading-relaxed uppercase">
+                                  * You may bypass this step for now to test the learning environment.
                                 </p>
                               </div>
                             </div>
@@ -231,11 +230,11 @@ export default function Payment() {
 
                           <div className="space-y-4">
                             <div className="flex items-center gap-3">
-                              <Info className="h-5 w-5 text-primary" />
-                              <h3 className="text-sm font-black text-white uppercase tracking-widest">Verification Timeline</h3>
+                              <ShieldCheck className="h-5 w-5 text-primary" />
+                              <h3 className="text-sm font-black text-white uppercase tracking-widest">Testing Protocol</h3>
                             </div>
                             <p className="text-[10px] text-slate-400 font-medium leading-relaxed px-2">
-                              Administrative review typically completes within <span className="text-white font-black underline decoration-primary underline-offset-4">24-48 Business Hours</span>. You will receive an encrypted notification once the asset is unlocked.
+                              For the purposes of this demonstration, click the button below to simulate a successful payment bypass and request immediate administrative verification.
                             </p>
                           </div>
                         </div>
@@ -244,30 +243,32 @@ export default function Payment() {
                           <form onSubmit={handleRequestAccess} className="space-y-8">
                             <div className="space-y-4 p-8 bg-slate-950/60 rounded-[2rem] border border-slate-800/80 shadow-inner">
                               <div className="space-y-2">
-                                <Label className="text-[10px] font-black uppercase tracking-widest text-primary ml-1">Payment Reference ID</Label>
+                                <Label className="text-[10px] font-black uppercase tracking-widest text-primary ml-1">Mock Reference ID (Optional)</Label>
                                 <Input
-                                  placeholder="CHECK # OR TRANSFER REF"
+                                  placeholder="BYPASS-PAYMENT-TEST"
                                   value={checkRef}
                                   onChange={(e) => setCheckRef(e.target.value.toUpperCase())}
-                                  required
                                   className="h-16 bg-slate-900/50 border-slate-800 focus:border-primary/50 text-white font-black tracking-widest rounded-2xl px-6 uppercase shadow-inner"
                                 />
                               </div>
                               <p className="text-[9px] text-slate-600 font-bold uppercase text-center tracking-widest">
-                                Submit only valid citations to avoid rejection.
+                                Any value will work for this demonstration.
                               </p>
                             </div>
 
                             <Button
                               type="submit"
                               disabled={processing}
+                              onClick={(e) => {
+                                if (!checkRef.trim()) { setCheckRef("MOCK-PAYMENT-BYPASS"); }
+                              }}
                               className="w-full h-20 rounded-[1.5rem] gradient-primary font-black text-xl uppercase tracking-widest shadow-2xl shadow-primary/20 hover:scale-[1.01] active:scale-[0.98] transition-all group overflow-hidden"
                             >
                               {processing ? (
                                 <Loader2 className="h-8 w-8 animate-spin" />
                               ) : (
                                 <div className="flex items-center gap-4">
-                                  <span>Deploy Request</span>
+                                  <span>Bypass & Enroll</span>
                                   <Send className="h-6 w-6 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
                                 </div>
                               )}

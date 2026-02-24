@@ -107,7 +107,7 @@ export default function InstructorDashboard() {
                 <CardContent className="p-8">
                   <div className="h-[400px] w-full mt-4">
                     <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={revenueData?.monthly}>
+                      <AreaChart data={revenueData?.monthly || []}>
                         <defs>
                           <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="5%" stopColor="#2563eb" stopOpacity={0.3} />
@@ -162,7 +162,7 @@ export default function InstructorDashboard() {
                 <CardContent className="p-8 flex-1 flex flex-col justify-between">
                   <div className="h-[300px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={revenueData?.monthly.slice(-6)}>
+                      <BarChart data={(revenueData?.monthly || []).slice(-6)}>
                         <Bar dataKey="enrollments" fill="#2563eb" radius={[6, 6, 0, 0]} barSize={20} />
                         <XAxis dataKey="month" hide />
                         <Tooltip

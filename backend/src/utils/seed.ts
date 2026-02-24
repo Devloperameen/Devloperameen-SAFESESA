@@ -123,6 +123,54 @@ const coursesData = [
                 ],
             },
         ],
+    },
+    {
+        title: 'Fullstack Web Development Bootcamp',
+        shortDescription: 'From HTML to React, Node.js, and MongoDB. The only course you need to become a full-stack web developer.',
+        description: 'Join the comprehensive web development bootcamp. Build real-world applications using the MERN stack.',
+        previewVideoUrl: 'https://www.youtube.com/watch?v=zJSY8tbf_ys',
+        price: 89.99,
+        category: 'Web Development',
+        level: 'intermediate',
+        thumbnail: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?q=80&w=800&auto=format&fit=crop',
+        rating: 4.9,
+        reviewCount: 3450,
+        students: 21000,
+        isFeatured: true,
+        status: 'published',
+        sections: [
+            {
+                title: 'Frontend Foundations',
+                lessons: [
+                    { title: 'HTML5 crash course', videoUrl: 'https://www.youtube.com/watch?v=UB1O30fR-EE', duration: 1200, order: 1 },
+                    { title: 'CSS3 fundamentals', videoUrl: 'https://www.youtube.com/watch?v=1Rs2ND1ryYc', duration: 1500, order: 2 },
+                ],
+            },
+        ],
+    },
+    {
+        title: 'iOS App Development with Swift',
+        shortDescription: 'Build native iOS applications using Swift and SwiftUI. Create beautiful, responsive mobile experiences natively.',
+        description: 'Learn how to build complete iOS apps. Understand SwiftUI, data flow, architecture, and App Store deployment.',
+        previewVideoUrl: 'https://www.youtube.com/watch?v=b1pb_R2kmdk',
+        price: 79.99,
+        category: 'Web Development',
+        level: 'beginner',
+        thumbnail: 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?q=80&w=800&auto=format&fit=crop',
+        rating: 4.6,
+        reviewCount: 930,
+        students: 8400,
+        isFeatured: false,
+        status: 'published',
+        sections: [
+            {
+                title: 'SwiftUI Basics',
+                lessons: [
+                    { title: 'Introduction to Swift', videoUrl: 'https://www.youtube.com/watch?v=8Xg7E9shq0U', duration: 900, order: 1 },
+                    { title: 'Views and Modifiers', videoUrl: 'https://www.youtube.com/watch?v=RjcXusvXJGA', duration: 1100, order: 2 },
+                ],
+            },
+        ],
     }
 ];
 
