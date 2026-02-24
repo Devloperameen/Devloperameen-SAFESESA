@@ -17,6 +17,7 @@ import categoryRoutes from './routes/categoryRoutes';
 import announcementRoutes from './routes/announcementRoutes';
 import adminRoutes from './routes/adminRoutes';
 import paymentRoutes from './routes/paymentRoutes';
+import curriculumRoutes from './routes/curriculumRoutes';
 
 dotenv.config();
 
@@ -142,6 +143,7 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/announcements', announcementRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/curriculum', curriculumRoutes);
 
 // 404 handler
 app.use((_req, res) => {

@@ -5,6 +5,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import StatsCard from "@/components/StatsCard";
 import AnimatedPage from "@/components/AnimatedPage";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { getInstructorRevenue, getInstructorStats } from "@/services/courseService";
 import { Badge } from "@/components/ui/badge";
 

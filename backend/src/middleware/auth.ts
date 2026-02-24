@@ -108,3 +108,14 @@ export const checkRole = (...roles: string[]) => {
     next();
   };
 };
+
+/**
+ * `restrictTo` is a semantic alias for `checkRole`.
+ *
+ * Usage examples:
+ *   router.post('/courses', protect, restrictTo('instructor', 'admin'), createCourse);
+ *   router.get('/admin/users', protect, restrictTo('admin'), getUsers);
+ *
+ * Students cannot edit courses; Instructors cannot access admin-only tools.
+ */
+export const restrictTo = checkRole;
