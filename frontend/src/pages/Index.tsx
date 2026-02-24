@@ -75,14 +75,14 @@ export default function Index() {
           >
             <motion.h1
               variants={itemVariants}
-              className="font-display text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight text-foreground leading-[1.1]"
+              className="font-display text-5xl md:text-6xl lg:text-7xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-white via-indigo-200 to-primary leading-[1.2]"
             >
-              Elevate Your <span className="text-primary italic">Skills</span> with EduFlow
+              Elevate Your <span className="text-primary italic font-serif drop-shadow-2xl">Skills</span> with EduFlow
             </motion.h1>
 
             <motion.p
               variants={itemVariants}
-              className="text-xl text-muted-foreground leading-relaxed max-w-lg"
+              className="text-xl text-slate-300 leading-relaxed max-w-lg font-medium"
             >
               Master top-tier industries with world-class courses taught by leading experts and visionaries. Your future starts now.
             </motion.p>

@@ -39,14 +39,14 @@ const coursesData = [
             {
                 title: 'Introduction to React',
                 lessons: [
-                    { title: 'Welcome to the Course', videoUrl: 'https://www.youtube.com/watch?v=SqcY0GlETPk', duration: 330, order: 1 },
+                    { title: 'Welcome to the Course', videoUrl: 'https://www.youtube.com/watch?v=bMknfKXIFA8', duration: 330, order: 1 },
                     { title: 'What is React?', videoUrl: 'https://www.youtube.com/watch?v=Ke90Tje7VS0', duration: 735, order: 2 },
                 ],
             },
             {
                 title: 'Working with State',
                 lessons: [
-                    { title: 'Understanding useState', videoUrl: 'https://www.youtube.com/watch?v=4dBv7G-0Y6s', duration: 920, order: 1 },
+                    { title: 'Understanding useState', videoUrl: 'https://www.youtube.com/watch?v=O6P86uwfdR0', duration: 920, order: 1 },
                     { title: 'useEffect Deep Dive', videoUrl: 'https://www.youtube.com/watch?v=0ZJgJwR629w', duration: 1365, order: 2 },
                 ],
             },
@@ -70,7 +70,7 @@ const coursesData = [
             {
                 title: 'Python Essentials',
                 lessons: [
-                    { title: 'Setting up Jupyter Notebook', videoUrl: 'https://www.youtube.com/watch?v=rfscVS0vtbw', duration: 600, order: 1 },
+                    { title: 'Setting up Jupyter Notebook', videoUrl: 'https://www.youtube.com/watch?v=r-uOLxNrNk8', duration: 600, order: 1 },
                     { title: 'Data Types and Variables', videoUrl: 'https://www.youtube.com/watch?v=vLqTf2b6GZw', duration: 1110, order: 2 },
                 ],
             },
@@ -94,7 +94,7 @@ const coursesData = [
             {
                 title: 'Figma Basics',
                 lessons: [
-                    { title: 'Touring the Interface', videoUrl: 'https://www.youtube.com/watch?v=Gu1axXGk6Vw', duration: 525, order: 1 },
+                    { title: 'Touring the Interface', videoUrl: 'https://www.youtube.com/watch?v=c9Wg6Cb_YlU', duration: 525, order: 1 },
                     { title: 'Shapes and Colors', videoUrl: 'https://www.youtube.com/watch?v=3qU_P_8n3fM', duration: 860, order: 2 },
                 ],
             },
