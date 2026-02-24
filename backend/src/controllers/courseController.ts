@@ -61,9 +61,9 @@ const parsePagination = (pageValue: unknown, limitValue: unknown, defaults?: { l
 export const getCourses = async (req: AuthRequest, res: Response) => {
   try {
     const { category, search, status, level, featured, free, page, limit } = req.query;
-    
+
     const query: any = {};
-    
+
     const publicStatuses = ['published', 'pending_unpublish'];
 
     // Public users only see published content and courses pending unpublish approval.
@@ -87,7 +87,7 @@ export const getCourses = async (req: AuthRequest, res: Response) => {
     } else {
       query.status = { $in: publicStatuses };
     }
-    
+
     if (category) {
       const categories = String(category)
         .split(',')
@@ -116,7 +116,7 @@ export const getCourses = async (req: AuthRequest, res: Response) => {
 
     if (featured === 'true') query.isFeatured = true;
     if (free === 'true') query.price = 0;
-    
+
     // Text search
     if (search) {
       query.$text = { $search: search as string };
@@ -124,13 +124,13 @@ export const getCourses = async (req: AuthRequest, res: Response) => {
 
     const pagination = parsePagination(page, limit, { limit: 12, maxLimit: 100 });
     const total = await Course.countDocuments(query);
-    
+
     const courses = await Course.find(query)
       .populate('instructorId', 'profile.name profile.avatar email')
       .sort({ createdAt: -1 })
       .skip(pagination.skip)
       .limit(pagination.limit);
-    
+
     res.json({
       success: true,
       count: courses.length,
@@ -160,7 +160,7 @@ export const getCourse = async (req: AuthRequest, res: Response) => {
   try {
     const course = await Course.findById(req.params.id)
       .populate('instructorId', 'profile.name profile.avatar profile.bio email');
-    
+
     if (!course) {
       return res.status(404).json({
         success: false,
@@ -184,7 +184,7 @@ export const getCourse = async (req: AuthRequest, res: Response) => {
         message: 'Course not found',
       });
     }
-    
+
     res.json({
       success: true,
       data: course,
@@ -206,7 +206,7 @@ export const createCourse = async (req: AuthRequest, res: Response) => {
     if (!errors.isEmpty()) {
       return res.status(400).json({ success: false, errors: errors.array() });
     }
-    
+
     const payload: any = {
       title: req.body.title,
       shortDescription: req.body.shortDescription,
@@ -222,13 +222,13 @@ export const createCourse = async (req: AuthRequest, res: Response) => {
     };
 
     const course = await Course.create(payload);
-    
+
     // Update category count
     await Category.findOneAndUpdate(
       { name: course.category },
       { $inc: { courseCount: 1 } }
     );
-    
+
     // Create activity
     await Activity.create({
       type: 'course_created',
@@ -236,7 +236,7 @@ export const createCourse = async (req: AuthRequest, res: Response) => {
       userId: req.user?._id,
       courseId: course._id,
     });
-    
+
     res.status(201).json({
       success: true,
       data: course,
@@ -260,14 +260,14 @@ export const updateCourse = async (req: AuthRequest, res: Response) => {
     }
 
     let course = await Course.findById(req.params.id);
-    
+
     if (!course) {
       return res.status(404).json({
         success: false,
         message: 'Course not found',
       });
     }
-    
+
     // Check ownership
     if (course.instructorId.toString() !== req.user?._id.toString() && req.user?.role !== 'admin') {
       return res.status(403).json({
@@ -275,7 +275,7 @@ export const updateCourse = async (req: AuthRequest, res: Response) => {
         message: 'Not authorized to update this course',
       });
     }
-    
+
     const oldCategory = course.category;
 
     const updateData: any = {
@@ -302,18 +302,18 @@ export const updateCourse = async (req: AuthRequest, res: Response) => {
       if (req.body.status !== undefined) updateData.status = req.body.status;
       if (req.body.rejectionReason !== undefined) updateData.rejectionReason = req.body.rejectionReason;
     }
-    
+
     course = await Course.findByIdAndUpdate(req.params.id, updateData, {
       new: true,
       runValidators: true,
     });
-    
+
     // Update category counts if category changed
     if (req.body.category && oldCategory !== req.body.category) {
       await Category.findOneAndUpdate({ name: oldCategory }, { $inc: { courseCount: -1 } });
       await Category.findOneAndUpdate({ name: req.body.category }, { $inc: { courseCount: 1 } });
     }
-    
+
     res.json({
       success: true,
       data: course,
@@ -447,14 +447,14 @@ export const requestCourseUnpublish = async (req: AuthRequest, res: Response) =>
 export const deleteCourse = async (req: AuthRequest, res: Response) => {
   try {
     const course = await Course.findById(req.params.id);
-    
+
     if (!course) {
       return res.status(404).json({
         success: false,
         message: 'Course not found',
       });
     }
-    
+
     // Check ownership
     if (course.instructorId.toString() !== req.user?._id.toString() && req.user?.role !== 'admin') {
       return res.status(403).json({
@@ -462,18 +462,18 @@ export const deleteCourse = async (req: AuthRequest, res: Response) => {
         message: 'Not authorized to delete this course',
       });
     }
-    
+
     await course.deleteOne();
-    
+
     // Update category count
     await Category.findOneAndUpdate(
       { name: course.category },
       { $inc: { courseCount: -1 } }
     );
-    
+
     // Delete enrollments
     await Enrollment.deleteMany({ courseId: course._id });
-    
+
     res.json({
       success: true,
       data: {},
@@ -500,7 +500,7 @@ export const getInstructorCourses = async (req: AuthRequest, res: Response) => {
       .sort({ createdAt: -1 })
       .skip(pagination.skip)
       .limit(pagination.limit);
-    
+
     res.json({
       success: true,
       count: courses.length,
@@ -627,7 +627,7 @@ export const getInstructorStats = async (req: AuthRequest, res: Response) => {
         },
       ]),
     ]);
-    
+
     const courseIds = courses.map((course) => course._id);
     const totalStudents = courseIds.length > 0
       ? await Enrollment.countDocuments({ courseId: { $in: courseIds } })
@@ -637,7 +637,7 @@ export const getInstructorStats = async (req: AuthRequest, res: Response) => {
       ? courses.reduce((sum, course) => sum + course.rating, 0) / courses.length
       : 0;
     const totalEarnings = Number(revenueTotalRow[0]?.total) || 0;
-    
+
     res.json({
       success: true,
       data: {
@@ -668,10 +668,10 @@ export const getInstructorMessages = async (req: AuthRequest, res: Response) => 
 
     const reviewRows = courseIds.length > 0
       ? await Review.find({ courseId: { $in: courseIds } })
-          .sort({ createdAt: -1 })
-          .populate('studentId', 'profile.name')
-          .populate('courseId', 'title')
-          .lean()
+        .sort({ createdAt: -1 })
+        .populate('studentId', 'profile.name')
+        .populate('courseId', 'title')
+        .lean()
       : [];
 
     const reviewMessages = reviewRows.map((review: any) => {
@@ -908,10 +908,10 @@ export const upsertCourseReview = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    if (enrollment.progress < 100) {
+    if (enrollment.progress < 10) {
       return res.status(400).json({
         success: false,
-        message: 'Complete the full course before submitting a review',
+        message: 'Complete at least 10% of the course before submitting a review',
       });
     }
 
