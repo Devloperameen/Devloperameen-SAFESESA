@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/contexts/RoleContext";
+import { apiRequest } from "@/lib/api"; // Added this import
+import AnimatedPage from "@/components/AnimatedPage"; // Added this import
 
 export default function Login() {
   const navigate = useNavigate();
@@ -102,6 +104,11 @@ export default function Login() {
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </Button>
+                </div>
+                <div className="flex justify-end">
+                  <Link to="/forgot-password" className="text-xs text-primary hover:underline">
+                    Forgot password?
+                  </Link>
                 </div>
               </div>
               <Button type="submit" className="w-full gradient-primary border-0" disabled={isLoading}>

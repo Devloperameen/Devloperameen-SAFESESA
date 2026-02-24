@@ -128,7 +128,7 @@ export default function CoursePlayer() {
   const currentLesson = course?.sections.flatMap((section) => section.lessons).find((lesson) => lesson.id === activeLesson);
   const currentVideoSource = getVideoSource(currentLesson?.videoUrl);
   const isCurrentLessonCompleted = completedLessons.has(activeLesson);
-  const canReviewCourse = progress === 100;
+  const canReviewCourse = progress >= 10;
 
   const toggleComplete = () => {
     if (!id || !activeLesson) return;
