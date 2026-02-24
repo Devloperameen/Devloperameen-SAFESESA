@@ -1,6 +1,7 @@
+
 import { FormEvent, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
-import { Eye, EyeOff, GraduationCap } from "lucide-react";
+import { Eye, EyeOff, GraduationCap, Lock, ShieldCheck, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,8 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/contexts/RoleContext";
-import { apiRequest } from "@/lib/api"; // Added this import
-import AnimatedPage from "@/components/AnimatedPage"; // Added this import
+import { motion } from "framer-motion";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -20,7 +20,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
 
   if (isInitializing) {
-    return <div className="min-h-screen grid place-items-center text-muted-foreground">Loading...</div>;
+    return <div className="min-h-screen bg-slate-950 grid place-items-center text-primary font-display animate-pulse uppercase tracking-[0.3em]">Handshaking Core...</div>;
   }
 
   if (isAuthenticated) {
@@ -33,7 +33,7 @@ export default function Login() {
     try {
       const user = await login({ email, password });
       setRole(user.role);
-      toast.success("Logged in successfully");
+      toast.success("Authentication accepted. Redirecting...");
 
       if (user.role === "admin") {
         navigate("/admin", { replace: true });
@@ -47,84 +47,125 @@ export default function Login() {
 
       navigate("/", { replace: true });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unable to log in";
+      const message = error instanceof Error ? error.message : "Authentication rejected";
       toast.error(message);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/10 px-4 py-10">
-      <div className="mx-auto flex w-full max-w-md items-center justify-center">
-        <Card className="w-full border-border/80 shadow-card">
-          <CardHeader className="space-y-4">
-            <Link to="/" className="mx-auto flex items-center gap-2 font-display text-xl font-bold">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg gradient-primary">
-                <GraduationCap className="h-5 w-5 text-primary-foreground" />
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Premium Background Aesthetic */}
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-secondary/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-[0.03] pointer-events-none" />
+
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.5 }}
+        className="w-full max-w-md relative z-10"
+      >
+        <Card className="bg-slate-900/40 border-slate-800/80 backdrop-blur-3xl shadow-2xl rounded-3xl overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-secondary to-primary animate-gradient-x" />
+          <CardHeader className="space-y-6 pt-10 pb-4">
+            <Link to="/" className="flex items-center justify-center gap-3 group transition-all">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-secondary shadow-lg shadow-secondary/20 group-hover:scale-110 transition-transform">
+                <GraduationCap className="h-6 w-6 text-white" />
               </div>
-              EduFlow
+              <span className="font-display text-3xl font-black text-white tracking-tight uppercase">EduFlow</span>
             </Link>
-            <div className="space-y-1 text-center">
-              <CardTitle className="font-display text-2xl">Welcome Back</CardTitle>
-              <CardDescription>Log in to continue your learning journey.</CardDescription>
+            <div className="space-y-2 text-center">
+              <CardTitle className="text-2xl font-black text-white uppercase tracking-tight">Authentication</CardTitle>
+              <CardDescription className="text-slate-500 font-medium">Re-establish your connection to the learning grid.</CardDescription>
             </div>
           </CardHeader>
-          <CardContent>
-            <form className="space-y-4" onSubmit={onSubmit}>
+          <CardContent className="px-8 pb-10">
+            <form className="space-y-6" onSubmit={onSubmit}>
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  autoComplete="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  required
-                />
+                <Label htmlFor="email" className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Identity Locator</Label>
+                <div className="relative">
+                  <Input
+                    id="email"
+                    type="email"
+                    autoComplete="email"
+                    placeholder="EMAIL@DOMAIN.COM"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    required
+                    className="bg-slate-950/60 border-slate-800 focus:border-primary/50 rounded-2xl h-14 px-5 text-white placeholder:text-slate-800 transition-all shadow-inner uppercase text-xs font-bold"
+                  />
+                </div>
               </div>
+
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <div className="flex justify-between items-center ml-1">
+                  <Label htmlFor="password" className="text-[10px] font-black uppercase tracking-widest text-slate-500">Security Phrase</Label>
+                  <Link to="/forgot-password" size="sm" className="text-[10px] font-black text-primary hover:text-white transition-colors uppercase tracking-widest">
+                    Lost Codes?
+                  </Link>
+                </div>
                 <div className="relative">
                   <Input
                     id="password"
                     type={showPassword ? "text" : "password"}
                     autoComplete="current-password"
-                    placeholder="Enter your password"
+                    placeholder="••••••••"
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
                     required
-                    className="pr-10"
+                    className="bg-slate-950/60 border-slate-800 focus:border-primary/50 rounded-2xl h-14 px-5 pr-14 text-white placeholder:text-slate-800 transition-all shadow-inner"
                   />
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-600 hover:text-white"
                     onClick={() => setShowPassword((prev) => !prev)}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </Button>
                 </div>
-                <div className="flex justify-end">
-                  <Link to="/forgot-password" className="text-xs text-primary hover:underline">
-                    Forgot password?
-                  </Link>
-                </div>
               </div>
-              <Button type="submit" className="w-full gradient-primary border-0" disabled={isLoading}>
-                {isLoading ? "Logging in..." : "Log In"}
+
+              <Button
+                type="submit"
+                className="w-full h-15 rounded-2xl gradient-primary font-black text-lg uppercase tracking-widest shadow-2xl shadow-primary/20 hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-70 mt-4 group h-14"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <div className="flex items-center gap-2">
+                    <span className="animate-pulse">Verifying...</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <span>Authorize Access</span>
+                    <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                )}
               </Button>
             </form>
 
-            <p className="mt-6 text-center text-sm text-muted-foreground">
-              Don&apos;t have an account?{" "}
-              <Link to="/signup" className="font-medium text-primary hover:underline">
-                Create one
-              </Link>
-            </p>
+            <div className="mt-10 pt-8 border-t border-slate-800/50 text-center space-y-4">
+              <p className="text-xs font-medium text-slate-500 uppercase tracking-widest">
+                New to the system?{" "}
+                <Link to="/signup" className="font-black text-white hover:text-primary transition-colors decoration-primary underline underline-offset-4">
+                  Register Identity
+                </Link>
+              </p>
+              <div className="flex items-center justify-center gap-4 text-[8px] font-black text-slate-600 uppercase tracking-[0.3em]">
+                <div className="flex items-center gap-1">
+                  <ShieldCheck className="h-3 w-3" />
+                  Secure Session
+                </div>
+                <div className="flex items-center gap-1">
+                  <Lock className="h-3 w-3" />
+                  AES-256
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
-      </div>
+      </motion.div>
     </div>
   );
 }
