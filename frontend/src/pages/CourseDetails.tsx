@@ -2,7 +2,7 @@
 import { useMemo } from "react";
 import { useParams, Link, useLocation } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Star, Users, Play, CheckCircle2, Heart, ShieldCheck, Zap, ArrowLeft, MoreHorizontal, MessageCircle } from "lucide-react";
+import { Star, Users, Play, CheckCircle2, Heart, ShieldCheck, Zap, ArrowLeft, MoreHorizontal, MessageCircle, Clock, Layers } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -46,10 +46,14 @@ export default function CourseDetails() {
     enabled: Boolean(id),
   });
 
-  const isEnrolled = useMemo(
-    () => Boolean(course && enrollments.some((enrollment) => enrollment.course.id === course.id)),
+  const enrollment = useMemo(
+    () => course ? enrollments.find((e) => e.course.id === course.id) : null,
     [course, enrollments],
   );
+
+  const isEnrolled = Boolean(enrollment && enrollment.status === "active");
+  const isPending = Boolean(enrollment && enrollment.status === "pending");
+  const isRejected = Boolean(enrollment && enrollment.status === "rejected");
 
   const isFavorite = useMemo(
     () => Boolean(course && favorites.some((favoriteCourse) => favoriteCourse.id === course.id)),
@@ -312,9 +316,25 @@ export default function CourseDetails() {
                           <Button className="w-full h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 font-black text-lg uppercase tracking-widest" disabled>
                             License Verified
                           </Button>
+                        ) : isPending ? (
+                          <div className="space-y-4">
+                            <Button className="w-full h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-500 font-black text-lg uppercase tracking-widest" disabled>
+                              <Clock className="mr-3 h-5 w-5 animate-pulse" />
+                              Verification Pending
+                            </Button>
+                            <div className="bg-amber-500/5 p-4 rounded-xl border border-amber-500/10">
+                              <p className="text-[9px] font-black text-amber-500 text-center uppercase tracking-widest">
+                                Administrative review is currently in progress.
+                              </p>
+                            </div>
+                          </div>
+                        ) : isRejected ? (
+                          <Button className="w-full h-16 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-500 font-black text-lg uppercase tracking-widest" disabled>
+                            Request Denied
+                          </Button>
                         ) : course.price > 0 ? (
                           <Button asChild className="w-full h-16 rounded-2xl gradient-primary font-black text-lg uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all" size="lg">
-                            <Link to={`/payment/${course.id}`}>Proceed to Checkout</Link>
+                            <Link to={`/payment/${course.id}`}>Request Access Protocol</Link>
                           </Button>
                         ) : (
                           <Button
@@ -326,6 +346,12 @@ export default function CourseDetails() {
                             {enrollMutation.isPending ? "Syncing..." : "Activate Free License"}
                           </Button>
                         )}
+
+                        {!isEnrolled && !isPending && !isRejected ? (
+                          <p className="text-[9px] text-slate-600 font-black text-center uppercase tracking-widest">
+                            Manual verification required after submission
+                          </p>
+                        ) : null}
 
                         <Button
                           variant="outline"

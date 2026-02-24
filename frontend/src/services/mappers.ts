@@ -71,6 +71,7 @@ export interface BackendEnrollment {
   progress: number;
   completedLessons: string[];
   lastAccessed: string;
+  status: "active" | "pending" | "rejected";
 }
 
 export interface BackendFavorite {
@@ -223,6 +224,7 @@ export function mapLearningEnrollment(enrollment: BackendEnrollment): LearningEn
     progress: enrollment.progress,
     lastAccessed: formatDate(enrollment.lastAccessed),
     completedLessons: (enrollment.completedLessons || []).map(String),
+    status: enrollment.status || "active",
   };
 }
 

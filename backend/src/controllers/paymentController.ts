@@ -14,7 +14,7 @@ export const processPayment = async (req: AuthRequest, res: Response) => {
     session.startTransaction();
 
     try {
-        const { courseId, paymentMethod, cardDetails } = req.body;
+        const { courseId, paymentMethod, paymentReference } = req.body;
 
         // Find course
         const course = await Course.findById(courseId).session(session);
@@ -22,46 +22,39 @@ export const processPayment = async (req: AuthRequest, res: Response) => {
             return res.status(404).json({ success: false, message: 'Course not found' });
         }
 
-        // Check if already enrolled
+        // Check if already enrolled (including pending)
         const existingEnrollment = await Enrollment.findOne({
             studentId: req.user?._id,
             courseId
         }).session(session);
 
         if (existingEnrollment) {
-            return res.status(400).json({ success: false, message: 'Already enrolled' });
+            return res.status(400).json({ success: false, message: 'Enrollment already exists (or pending approval)' });
         }
 
-        // Simulate payment processor delay
-        await new Promise(resolve => setTimeout(resolve, 1500));
-
-        // Create random transaction ID
-        const dummyTransactionId = `tr_${Math.random().toString(36).substr(2, 9)}`;
-
-        // Create transaction record
+        // Create transaction record (pending)
         const transaction = await Transaction.create([{
             userId: req.user?._id,
             courseId,
             amount: course.price,
-            paymentMethod: paymentMethod || 'credit_card',
-            transactionId: dummyTransactionId,
-            status: 'completed',
+            paymentMethod: paymentMethod || 'check',
+            transactionId: `req_${Math.random().toString(36).substr(2, 9)}`,
+            status: 'pending',
         }], { session });
 
-        // Create enrollment
+        // Create enrollment (pending)
         const enrollment = await Enrollment.create([{
             studentId: req.user?._id,
             courseId,
+            status: 'pending',
+            paymentReference: paymentReference || '',
             enrolledAt: new Date(),
         }], { session });
 
-        // Update course student count
-        await Course.findByIdAndUpdate(courseId, { $inc: { students: 1 } }).session(session);
-
-        // Log activity
+        // Log activity as a request
         await Activity.create([{
             type: 'enrollment',
-            message: `${req.user?.profile.name} purchased and enrolled in "${course.title}"`,
+            message: `${req.user?.profile.name} requested enrollment for "${course.title}" (Check ref: ${paymentReference || 'N/A'})`,
             userId: req.user?._id,
             courseId: course._id,
         }], { session });

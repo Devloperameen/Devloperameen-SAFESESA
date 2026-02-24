@@ -11,6 +11,7 @@ import {
   getEnrollments,
   manualEnroll,
   unenroll,
+  updateEnrollmentStatus,
 } from '../controllers/adminController';
 import { protect, checkRole } from '../middleware/auth';
 
@@ -36,6 +37,7 @@ router.get('/activities', getActivities);
 // Enrollments
 router.get('/enrollments', getEnrollments);
 router.post('/enrollments', manualEnroll);
+router.put('/enrollments/:id/status', updateEnrollmentStatus);
 router.delete('/enrollments/:id', unenroll);
 
 export default router;

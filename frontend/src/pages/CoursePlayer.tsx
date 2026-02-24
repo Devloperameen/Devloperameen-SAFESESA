@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Play, CheckCircle2, Circle, ChevronDown, ChevronRight } from "lucide-react";
+import { Play, CheckCircle2, Circle, ChevronDown, ChevronRight, Clock, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -164,6 +164,54 @@ export default function CoursePlayer() {
           <p className="text-muted-foreground">You need to enroll in this course before accessing lessons.</p>
           <Button asChild>
             <Link to={`/course/${course.id}`}>Back to Course</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Handle Approval Workflow UI
+  if (enrollment?.status === "pending") {
+    return (
+      <div className="flex h-screen items-center justify-center bg-slate-950 px-4">
+        <div className="max-w-xl text-center space-y-10 p-12 bg-slate-900/40 border border-slate-800 rounded-[3rem] backdrop-blur-3xl shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 h-40 w-40 bg-primary/10 blur-[60px] rounded-full" />
+          <div className="relative z-10 space-y-6">
+            <div className="h-20 w-20 bg-amber-500/10 rounded-3xl flex items-center justify-center border border-amber-500/20 mx-auto">
+              <Clock className="h-10 w-10 text-amber-500 animate-pulse" />
+            </div>
+            <div className="space-y-3">
+              <h1 className="font-black text-4xl uppercase tracking-tighter text-white">Verification in Progress</h1>
+              <p className="text-slate-400 font-medium leading-relaxed max-w-sm mx-auto">
+                Our administrative team is currently verifying your payment reference. Access to the instructional environment will be granted shortly.
+              </p>
+            </div>
+            <div className="pt-6">
+              <Button asChild className="h-14 px-10 rounded-2xl bg-white text-black font-black uppercase tracking-widest hover:bg-slate-200">
+                <Link to="/my-learning">Learning Dashboard</Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (enrollment?.status === "rejected") {
+    return (
+      <div className="flex h-screen items-center justify-center bg-slate-950 px-4">
+        <div className="max-w-md text-center space-y-8 p-12 bg-slate-900/40 border border-rose-900/30 rounded-[3rem] backdrop-blur-3xl">
+          <div className="h-16 w-16 bg-rose-500/10 rounded-2xl flex items-center justify-center border border-rose-500/20 mx-auto">
+            <XCircle className="h-8 w-8 text-rose-500" />
+          </div>
+          <div className="space-y-2">
+            <h1 className="font-black text-3xl uppercase tracking-tighter text-white">Access Denied</h1>
+            <p className="text-slate-500 font-medium text-sm">
+              Your enrollment request for this asset was rejected during verification. Please contact support or resubmit valid citation.
+            </p>
+          </div>
+          <Button asChild variant="outline" className="border-slate-800 text-slate-400">
+            <Link to="/my-learning">Back to Dashboard</Link>
           </Button>
         </div>
       </div>

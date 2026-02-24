@@ -5,6 +5,8 @@ export interface IEnrollment extends Document {
   courseId: Types.ObjectId;
   progress: number;
   completedLessons: Types.ObjectId[];
+  status: 'pending' | 'active' | 'rejected';
+  paymentReference?: string;
   enrolledAt: Date;
   lastAccessed: Date;
   createdAt: Date;
@@ -32,6 +34,15 @@ const enrollmentSchema = new Schema<IEnrollment>(
     completedLessons: [{
       type: Schema.Types.ObjectId,
     }],
+    status: {
+      type: String,
+      enum: ['pending', 'active', 'rejected'],
+      default: 'pending',
+    },
+    paymentReference: {
+      type: String,
+      trim: true,
+    },
     enrolledAt: {
       type: Date,
       default: Date.now,

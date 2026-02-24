@@ -68,4 +68,5 @@ export interface LearningEnrollment {
   progress: number;
   lastAccessed: string;
   completedLessons: string[];
+  status: "active" | "pending" | "rejected";
 }

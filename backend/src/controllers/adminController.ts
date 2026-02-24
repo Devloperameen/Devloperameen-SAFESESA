@@ -285,6 +285,69 @@ export const unenroll = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };
+// @desc    Update enrollment status (Approve/Reject)
+// @route   PUT /api/admin/enrollments/:id/status
+// @access  Private (Admin)
+export const updateEnrollmentStatus = async (req: AuthRequest, res: Response) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const { status } = req.body;
+    if (!['active', 'rejected'].includes(status)) {
+      return res.status(400).json({ success: false, message: 'Invalid status' });
+    }
+    const enrollment = await Enrollment.findById(req.params.id).session(session);
+    if (!enrollment) {
+      await session.abortTransaction();
+      return res.status(404).json({ success: false, message: 'Enrollment not found' });
+    }
+    if (enrollment.status !== 'pending') {
+      await session.abortTransaction();
+      return res.status(400).json({ success: false, message: 'Enrollment is already processed' });
+    }
+    const user = await User.findById(enrollment.studentId).session(session);
+    const course = await Course.findById(enrollment.courseId).session(session);
+    // Update enrollment
+    enrollment.status = status;
+    await enrollment.save({ session });
+    // Find associated transaction and update it
+    const transaction = await Transaction.findOne({
+      userId: enrollment.studentId,
+      courseId: enrollment.courseId,
+      status: 'pending'
+    }).session(session);
+    if (transaction) {
+      transaction.status = status === 'active' ? 'completed' : 'failed';
+      await transaction.save({ session });
+    }
+    if (status === 'active') {
+      // Increment students count
+      await Course.findByIdAndUpdate(enrollment.courseId, { $inc: { students: 1 } }).session(session);
+      // Log activity
+      await Activity.create([{
+        type: 'enrollment',
+        message: `Admin approved enrollment for ${user?.profile.name} in "${course?.title}"`,
+        userId: user?._id,
+        courseId: course?._id,
+      }], { session });
+    } else {
+      await Activity.create([{
+        type: 'enrollment',
+        message: `Admin rejected enrollment for ${user?.profile.name} in "${course?.title}"`,
+        userId: user?._id,
+        courseId: course?._id,
+      }], { session });
+    }
+    await session.commitTransaction();
+    session.endSession();
+    res.json({ success: true, data: enrollment });
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    console.error('Update Enrollment Status Error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
 
 export const getEnrollments = async (req: AuthRequest, res: Response) => {
   try {

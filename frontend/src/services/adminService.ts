@@ -230,6 +230,8 @@ export interface AdminEnrollment {
   courseId: string;
   courseTitle: string;
   enrolledAt: string;
+  status: 'pending' | 'active' | 'rejected';
+  paymentReference?: string;
 }
 
 export async function getAdminEnrollments(): Promise<AdminEnrollment[]> {
@@ -243,7 +245,19 @@ export async function getAdminEnrollments(): Promise<AdminEnrollment[]> {
     courseId: item.courseId?._id,
     courseTitle: item.courseId?.title || "Unknown Course",
     enrolledAt: item.enrolledAt,
+    status: item.status || 'active',
+    paymentReference: item.paymentReference,
   }));
+}
+
+export async function updateEnrollmentStatusByAdmin(
+  enrollmentId: string,
+  status: "active" | "rejected"
+): Promise<void> {
+  await apiRequest(`/admin/enrollments/${enrollmentId}/status`, {
+    method: "PUT",
+    body: { status },
+  });
 }
 
 export async function manualEnrollByAdmin(userId: string, courseId: string): Promise<void> {

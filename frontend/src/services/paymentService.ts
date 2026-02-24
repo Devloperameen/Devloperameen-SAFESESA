@@ -19,7 +19,7 @@ export interface Transaction {
 export async function processPayment(payload: {
     courseId: string;
     paymentMethod: string;
-    cardDetails?: any;
+    paymentReference?: string;
 }) {
     return apiRequest<{
         transaction: any;
