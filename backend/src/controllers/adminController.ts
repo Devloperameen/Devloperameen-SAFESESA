@@ -1,8 +1,10 @@
 import { Response } from 'express';
+import mongoose from 'mongoose';
 import User from '../models/User';
 import Course from '../models/Course';
 import Activity from '../models/Activity';
 import Enrollment from '../models/Enrollment';
+import Transaction from '../models/Transaction';
 import { AuthRequest } from '../middleware/auth';
 
 interface MonthBucket {
