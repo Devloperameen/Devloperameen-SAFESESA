@@ -60,7 +60,7 @@ const parsePagination = (pageValue: unknown, limitValue: unknown, defaults?: { l
 export const getUsers = async (req: AuthRequest, res: Response) => {
   try {
     const { search, role, status, page, limit } = req.query;
-    
+
     const query: any = {};
     if (role) query.role = role;
     if (status) query.status = status;
@@ -70,7 +70,7 @@ export const getUsers = async (req: AuthRequest, res: Response) => {
         { 'profile.name': { $regex: search, $options: 'i' } },
       ];
     }
-    
+
     const pagination = parsePagination(page, limit, { limit: 20, maxLimit: 100 });
     const total = await User.countDocuments(query);
 
@@ -78,7 +78,7 @@ export const getUsers = async (req: AuthRequest, res: Response) => {
       .sort({ createdAt: -1 })
       .skip(pagination.skip)
       .limit(pagination.limit);
-    
+
     res.json({
       success: true,
       count: users.length,
@@ -107,27 +107,27 @@ export const getUsers = async (req: AuthRequest, res: Response) => {
 export const updateUserRole = async (req: AuthRequest, res: Response) => {
   try {
     const { role } = req.body;
-    
+
     if (!['student', 'instructor', 'admin'].includes(role)) {
       return res.status(400).json({
         success: false,
         message: 'Invalid role',
       });
     }
-    
+
     const user = await User.findByIdAndUpdate(
       req.params.id,
       { role },
       { new: true, runValidators: true }
     );
-    
+
     if (!user) {
       return res.status(404).json({
         success: false,
         message: 'User not found',
       });
     }
-    
+
     res.json({
       success: true,
       data: user,
@@ -146,27 +146,27 @@ export const updateUserRole = async (req: AuthRequest, res: Response) => {
 export const updateUserStatus = async (req: AuthRequest, res: Response) => {
   try {
     const { status } = req.body;
-    
+
     if (!['active', 'suspended'].includes(status)) {
       return res.status(400).json({
         success: false,
         message: 'Invalid status',
       });
     }
-    
+
     const user = await User.findByIdAndUpdate(
       req.params.id,
       { status },
       { new: true, runValidators: true }
     );
-    
+
     if (!user) {
       return res.status(404).json({
         success: false,
         message: 'User not found',
       });
     }
-    
+
     res.json({
       success: true,
       data: user,
@@ -255,20 +255,63 @@ export const getCoursesForModeration = async (req: AuthRequest, res: Response) =
   }
 };
 
+export const manualEnroll = async (req: AuthRequest, res: Response) => {
+  try {
+    const { userId, courseId } = req.body;
+    const course = await Course.findById(courseId);
+    if (!course) return res.status(404).json({ success: false, message: 'Course not found' });
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    const existing = await Enrollment.findOne({ studentId: userId, courseId });
+    if (existing) return res.status(400).json({ success: false, message: 'User already enrolled' });
+    const enrollment = await Enrollment.create({ studentId: userId, courseId });
+    await Course.findByIdAndUpdate(courseId, { $inc: { students: 1 } });
+    await Activity.create({ type: 'enrollment', message: `Admin enrolled ${user.profile.name} in ${course.title}`, userId, courseId });
+    res.status(201).json({ success: true, data: enrollment });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+export const unenroll = async (req: AuthRequest, res: Response) => {
+  try {
+    const enrollment = await Enrollment.findById(req.params.id);
+    if (!enrollment) return res.status(404).json({ success: false, message: 'Enrollment not found' });
+    const courseId = enrollment.courseId;
+    await Enrollment.findByIdAndDelete(req.params.id);
+    await Course.findByIdAndUpdate(courseId, { $inc: { students: -1 } });
+    res.json({ success: true, message: 'Unenrolled' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+export const getEnrollments = async (req: AuthRequest, res: Response) => {
+  try {
+    const enrollments = await Enrollment.find()
+      .populate('studentId', 'profile.name email role')
+      .populate('courseId', 'title')
+      .sort({ enrolledAt: -1 });
+    res.json({ success: true, data: enrollments });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
 // @desc    Approve/Reject course
 // @route   PUT /api/admin/courses/:id/status
 // @access  Private (Admin)
 export const updateCourseStatus = async (req: AuthRequest, res: Response) => {
   try {
     const { status, rejectionReason } = req.body;
-    
+
     if (!['published', 'rejected', 'pending', 'draft'].includes(status)) {
       return res.status(400).json({
         success: false,
         message: 'Invalid status',
       });
     }
-    
+
     const existingCourse = await Course.findById(req.params.id);
     if (!existingCourse) {
       return res.status(404).json({
@@ -307,13 +350,13 @@ export const updateCourseStatus = async (req: AuthRequest, res: Response) => {
     } else if (status !== 'rejected') {
       updateData.rejectionReason = undefined;
     }
-    
+
     const course = await Course.findByIdAndUpdate(
       req.params.id,
       updateData,
       { new: true, runValidators: true }
     ).populate('instructorId', 'profile.name');
-    
+
     // Create activity
     let activityType: 'course_approved' | 'course_rejected' = 'course_approved';
     let message = `Course "${course.title}" status updated to ${status}`;
@@ -343,7 +386,7 @@ export const updateCourseStatus = async (req: AuthRequest, res: Response) => {
       message,
       courseId: course._id,
     });
-    
+
     res.json({
       success: true,
       data: course,
@@ -362,17 +405,17 @@ export const updateCourseStatus = async (req: AuthRequest, res: Response) => {
 export const toggleFeatured = async (req: AuthRequest, res: Response) => {
   try {
     const course = await Course.findById(req.params.id);
-    
+
     if (!course) {
       return res.status(404).json({
         success: false,
         message: 'Course not found',
       });
     }
-    
+
     course.isFeatured = !course.isFeatured;
     await course.save();
-    
+
     res.json({
       success: true,
       data: course,
@@ -469,7 +512,7 @@ export const getAnalytics = async (req: AuthRequest, res: Response) => {
       courses: Number(row.courses) || 0,
       students: Number(row.students) || 0,
     }));
-    
+
     res.json({
       success: true,
       data: {
@@ -499,13 +542,13 @@ export const getAnalytics = async (req: AuthRequest, res: Response) => {
 export const getActivities = async (req: AuthRequest, res: Response) => {
   try {
     const limit = parseInt(req.query.limit as string) || 20;
-    
+
     const activities = await Activity.find()
       .sort({ createdAt: -1 })
       .limit(limit)
       .populate('userId', 'profile.name')
       .populate('courseId', 'title');
-    
+
     res.json({
       success: true,
       count: activities.length,

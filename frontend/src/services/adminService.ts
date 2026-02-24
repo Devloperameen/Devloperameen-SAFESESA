@@ -220,3 +220,41 @@ export async function getAdminActivities(limit: number = 20): Promise<AdminActiv
     courseTitle: mapActivityCourseTitle(item.courseId),
   }));
 }
+
+export interface AdminEnrollment {
+  id: string;
+  studentId: string;
+  studentName: string;
+  studentEmail: string;
+  studentRole: string;
+  courseId: string;
+  courseTitle: string;
+  enrolledAt: string;
+}
+
+export async function getAdminEnrollments(): Promise<AdminEnrollment[]> {
+  const payload = await apiRequestWithMeta<any[]>("/admin/enrollments");
+  return payload.data.map((item: any) => ({
+    id: item._id,
+    studentId: item.studentId?._id,
+    studentName: item.studentId?.profile?.name || "Unknown",
+    studentEmail: item.studentId?.email || "Unknown",
+    studentRole: item.studentId?.role || "student",
+    courseId: item.courseId?._id,
+    courseTitle: item.courseId?.title || "Unknown Course",
+    enrolledAt: item.enrolledAt,
+  }));
+}
+
+export async function manualEnrollByAdmin(userId: string, courseId: string): Promise<void> {
+  await apiRequest("/admin/enrollments", {
+    method: "POST",
+    body: { userId, courseId },
+  });
+}
+
+export async function unenrollByAdmin(enrollmentId: string): Promise<void> {
+  await apiRequest(`/admin/enrollments/${enrollmentId}`, {
+    method: "DELETE",
+  });
+}

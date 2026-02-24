@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 const adminLinks = [
   { label: "Overview", to: "/admin", icon: LayoutDashboard },
   { label: "Users", to: "/admin/users", icon: Users },
+  { label: "Enrollments", to: "/admin/enrollments", icon: BookOpen },
   { label: "Courses", to: "/admin/courses", icon: BookOpen },
   { label: "Categories", to: "/admin/categories", icon: FolderTree },
   { label: "Announcements", to: "/admin/announcements", icon: Megaphone },

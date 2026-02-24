@@ -26,6 +26,7 @@ import UserManagement from "./pages/UserManagement";
 import CourseModeration from "./pages/CourseModeration";
 import CategoryManagement from "./pages/CategoryManagement";
 import Announcements from "./pages/Announcements";
+import EnrollmentManagement from "./pages/EnrollmentManagement";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -82,6 +83,7 @@ function RoleBasedRoutes() {
             <Route path="/admin/course/:id" element={<CourseDetails />} />
             <Route path="/admin/categories" element={<CategoryManagement />} />
             <Route path="/admin/announcements" element={<Announcements />} />
+            <Route path="/admin/enrollments" element={<EnrollmentManagement />} />
             <Route path="*" element={<Navigate to="/admin" replace />} />
           </Routes>
         </AnimatePresence>

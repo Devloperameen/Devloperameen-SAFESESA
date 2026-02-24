@@ -8,6 +8,9 @@ import {
   toggleFeatured,
   getAnalytics,
   getActivities,
+  getEnrollments,
+  manualEnroll,
+  unenroll,
 } from '../controllers/adminController';
 import { protect, checkRole } from '../middleware/auth';
 
@@ -29,5 +32,10 @@ router.put('/courses/:id/featured', toggleFeatured);
 // Analytics
 router.get('/analytics', getAnalytics);
 router.get('/activities', getActivities);
+
+// Enrollments
+router.get('/enrollments', getEnrollments);
+router.post('/enrollments', manualEnroll);
+router.delete('/enrollments/:id', unenroll);
 
 export default router;
